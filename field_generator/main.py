@@ -21,7 +21,7 @@ DEFAULT_CONFIG = {
     "treemap_final_filter_sigma": 0.5, # sigma of the final filter
     "tree_threshold": 0.4, # threshold for tree existence (1 -> no trees, 0 -> all trees) ### randomization from 0 to 1
     "tree_pixel_size": 40, # size of each tree sprite in pixels
-    "tree_center_jitter": 0, # jitter of the tree center (in pixels) ### maybe slight randomization (integer positive numbers) ### COORDINATE TRACKING BROKEN
+    "tree_center_jitter": 5, # jitter of the tree center (in pixels) ### maybe slight randomization (integer positive numbers)
     "tree_xspace": 15, # x space between trees (in pixels)
     "tree_yspace": 30, # y space between trees (in pixels)
     "treesize_steepness": 4.0, # steepness of the variation of tree size with respect to the probability map ### maybe slight randomization

@@ -83,7 +83,7 @@ def generate_tree_sprites(treesize_map,
     y_coords = y_coords.unsqueeze(0).unsqueeze(0).expand(batch_size, map_N, map_M, -1, -1)
     x_offsets = tree_offsets[0].unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)
     y_offsets = tree_offsets[1].unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)
-    dist = torch.sqrt((x_coords + x_offsets - center[0]) ** 2 + (y_coords + y_offsets - center[1]) ** 2)/tree_pixel_size*2
+    dist = torch.sqrt((x_coords - center[0] - x_offsets) ** 2 + (y_coords - center[1] - y_offsets) ** 2)/tree_pixel_size*2
 
     del x_coords, y_coords, x_offsets, y_offsets
     
@@ -228,8 +228,8 @@ def bool_tensor_to_coords(bool_tensor, offsets, constant_offset, dx, dy) -> torc
         if indices.numel() == 0:
             coords_list.append(torch.empty((0, 2)))
             continue
-        y = indices[:, 0].float() * dy + constant_offset[0] + offsets[b][0, bool_tensor[b]].flatten()
-        x = indices[:, 1].float() * dx + constant_offset[1] + offsets[b][1, bool_tensor[b]].flatten()
+        y = indices[:, 0].float() * dy + constant_offset[1] + offsets[b][1, bool_tensor[b]].flatten()
+        x = indices[:, 1].float() * dx + constant_offset[0] + offsets[b][0, bool_tensor[b]].flatten()
         coords = torch.stack((x, y), dim=1)  # (N_i, 2)
         coords_list.append(coords)
 
