@@ -1,3 +1,4 @@
+import numpy as np
 import time
 from types import SimpleNamespace
 from glue_n_split import glue_together,\
@@ -30,5 +31,10 @@ def postprocessing(batch, coordinates, **kwargs):
     if config.verbose:
         toc = time.perf_counter()
         print(f"Postprocessing time: {toc - tic:0.4f} seconds")
+
+    newimage = newimage.astype(np.uint16)
+    for i in range(len(newcoords)):
+        newcoords[i] = newcoords[i].astype(np.uint16)
+    treecount = treecount.astype(np.uint16)
 
     return newimage, newcoords, treecount

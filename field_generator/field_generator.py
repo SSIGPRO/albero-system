@@ -7,7 +7,6 @@ from types import SimpleNamespace
 from generators import generate_probability_maps,\
                        generate_tree_sprites,\
                        prob_to_treesize,\
-                       generate_tree_sprites,\
                        generate_field_mask,\
                        project_shadow,\
                        compute_gradient_map,\
@@ -21,10 +20,13 @@ def generate_field(**kwargs):
     if config.verbose:
         tic = time.perf_counter()
 
+    GAIN = config.field_generation_zoom
+    CANVAS_SIZE = config.field_size[0]*GAIN, config.field_size[1]*GAIN
+    
     # generate background color
     canvas_shape = (config.batch_size,
-                    config.field_generated_size[0] + 2*config.field_generated_margin,
-                    config.field_generated_size[1] + 2*config.field_generated_margin)
+                    CANVAS_SIZE[0],
+                    CANVAS_SIZE[1])
     
     field_channels = torch.stack([
         torch.full(canvas_shape, config.color_bkg[0], device=config.device, dtype=torch.float32),
@@ -33,14 +35,14 @@ def generate_field(**kwargs):
         torch.full(canvas_shape, config.color_bkg[3], device=config.device, dtype=torch.float32)
     ])
 
-    # apply overlay 2 to background
-    overlay_margin = 5
+    # apply overlay to background
+    overlay_margin = 1
     background_mask2 = torch.randn_like(field_channels[0])
     background_mask2[..., :, :overlay_margin] = -1
     background_mask2[..., :overlay_margin, :] = -1
     background_mask2[..., :, -overlay_margin:] = -1
     background_mask2[..., -overlay_margin:, :] = -1
-    background_mask2 = torch.sigmoid(gaussian_filter(background_mask2, 51, 16)*200-1)
+    background_mask2 = torch.sigmoid(gaussian_filter(background_mask2, 25, 8.0)*100-1)
     for i in range(4):
         field_channels[i] = field_channels[i]*(1-background_mask2) + config.color_bkg_overlay[i]*background_mask2
 
@@ -60,23 +62,25 @@ def generate_field(**kwargs):
     bkg_stain_map = torch.rand(bkg_stain_map_shape, device=config.device)*(config.bkg_stain_strength-config.bkg_stain_strength_min)+config.bkg_stain_strength_min
 
     # Generate background stains sprites
-    bkg_stain_sprites, _ = generate_tree_sprites(bkg_stain_map, config.bkg_stain_pixel_size, [config.bkg_stain_center_jitter]*2)
+    bkg_stain_sprites, _, _ = generate_tree_sprites(bkg_stain_map,
+                                                    tree_sprite_size=config.bkg_stain_pixel_size,
+                                                    tree_size=5,
+                                                    max_tree_size=10,
+                                                    center_jitter=[config.bkg_stain_center_jitter]*2)
 
     # Free gpu memory
     del bkg_stain_map
 
     # Generate field background stains mask
-    background_mask = generate_field_mask(bkg_stain_sprites, config.field_generated_size, distance=(config.tree_xspace//3, config.tree_yspace))
-    margin_tuple = (config.field_generated_margin+config.bkg_stain_offset,
-                    config.field_generated_margin-config.bkg_stain_offset,
-                    config.field_generated_margin+config.bkg_stain_offset,
-                    config.field_generated_margin-config.bkg_stain_offset)
-    background_mask = torch.nn.functional.pad(background_mask, margin_tuple, "constant")
+    background_mask = generate_field_mask(bkg_stain_sprites,
+                                          CANVAS_SIZE,
+                                          distance=(config.tree_xspace*GAIN//3, config.tree_yspace*GAIN),
+                                          offset=config.bkg_stain_offset*GAIN)
 
     # Free gpu memory
     del bkg_stain_sprites
 
-    # apply overlay 1 to background
+    # apply stains to background
     for i in range(4):
         field_channels[i] = field_channels[i]*(1-background_mask) + config.color_bkg_overlay[i]*background_mask
 
@@ -122,8 +126,8 @@ def generate_field(**kwargs):
     # Generate tree size map and number of trees labels
     treesize_map, tree_boolmap, tree_count = prob_to_treesize(prob_map, 
                                                               threshold=config.tree_threshold,
-                                                              steepness=config.treesize_steepness,
-                                                              distribution_shift=config.treesize_distribution_shift)
+                                                              steepness=config.tree_steepness,
+                                                              distribution_shift=config.tree_distribution_shift)
     
     # Free gpu memory
     del prob_map
@@ -136,20 +140,23 @@ def generate_field(**kwargs):
         tic = time.perf_counter()
 
     # Generate tree sprites
-    tree_sprites, tree_offsets = generate_tree_sprites(treesize_map=treesize_map,
-                                                       tree_pixel_size=config.tree_pixel_size,
-                                                       center_jitter=(config.tree_center_jitter, config.tree_center_jitter),
-                                                       treesize_gain=config.treesize_gain,
-                                                       max_radius=config.treesize_max,
-                                                       noise_level=config.treesize_noise)
+    tree_sprites, tree_offsets, tree_sizes = generate_tree_sprites(treesize_map=treesize_map,
+                                                                   tree_size=config.treeshape_size*GAIN,
+                                                                   max_tree_size=config.treeshape_max_size*GAIN,
+                                                                   tree_sprite_size=config.tree_sprite_size*GAIN,
+                                                                   center_jitter=(config.tree_center_jitter*GAIN, config.tree_center_jitter*GAIN),
+                                                                   noise_level=config.treeshape_size*GAIN,
+                                                                   filter_size=config.treeshape_filter_size,
+                                                                   filter_sigma=config.treeshape_filter_sigma,)
     
     # Free gpu memory
     del treesize_map
 
     # Generate field tree mask
-    field_tree_mask = generate_field_mask(tree_sprites, config.field_generated_size, distance=(config.tree_xspace, config.tree_yspace))
-    margin_tuple = tuple([config.field_generated_margin]*4)
-    field_tree_mask = torch.nn.functional.pad(field_tree_mask, margin_tuple, "constant")
+    field_tree_mask = generate_field_mask(tree_sprites,
+                                          CANVAS_SIZE,
+                                          distance=(config.tree_xspace*GAIN, config.tree_yspace*GAIN),
+                                          offset=config.tree_offset*GAIN)
 
     # Free gpu memory
     del tree_sprites
@@ -158,17 +165,18 @@ def generate_field(**kwargs):
         toc = time.perf_counter()
         print(f"Field of trees generation time: {toc - tic:0.4f} seconds")
 
-    ############################### Generate coordinates
+    ############################### Generate coordinates and sizes
     if config.verbose:
         tic = time.perf_counter()
 
     # Convert treebool_map to coordinate labels
-    constant_offset = [config.field_generated_margin + config.tree_pixel_size]*2
+    constant_offset = [config.tree_offset*GAIN + config.tree_sprite_size*GAIN]*2
     tree_coordinates = bool_tensor_to_coords(tree_boolmap,
                                              tree_offsets,
                                              constant_offset,
-                                             config.tree_xspace,
-                                             config.tree_yspace,)
+                                             tree_sizes,
+                                             config.tree_xspace*GAIN,
+                                             config.tree_yspace*GAIN,)
     
     if config.verbose:
         toc = time.perf_counter()
@@ -181,7 +189,7 @@ def generate_field(**kwargs):
     # Generate shadows mask
     field_shadows_mask = project_shadow(field_tree_mask,
                                         config.shadow_iterations,
-                                        config.shadow_length,
+                                        config.shadow_length*GAIN,
                                         config.shadow_direction)
 
     # apply projected shadows to backgroud
@@ -197,7 +205,7 @@ def generate_field(**kwargs):
         tic = time.perf_counter()
 
     # smooth background
-    field_channels = gaussian_filter(field_channels, 9, 2.0)
+    field_channels = gaussian_filter(field_channels, 5, 1.5)
 
     if config.verbose:
         toc = time.perf_counter()
@@ -247,7 +255,7 @@ def generate_field(**kwargs):
     field_channels = field_channels.permute(1, 0, 2, 3)
 
     # Resize to desired size
-    output = v2.functional.resize(field_channels, config.output_size)
+    output = v2.functional.resize(field_channels, config.field_size)
 
     # Convert to 16 bit numpy channels
     output = (output.round()).cpu().numpy().astype(np.uint16)
@@ -256,9 +264,7 @@ def generate_field(**kwargs):
     # Adjust coordinates to match the output size and convert to numpy
     for i in range(len(tree_coordinates)):
         tree_coordinates[i] = tree_coordinates[i].to(torch.float32) 
-        tree_coordinates[i][:, 0] = tree_coordinates[i][:, 0]*float(config.output_size[0])/float(config.field_generated_size[0]+2*config.field_generated_margin)
-        tree_coordinates[i][:, 1] = tree_coordinates[i][:, 1]*float(config.output_size[1])/float(config.field_generated_size[1]+2*config.field_generated_margin)
-        tree_coordinates[i] = tree_coordinates[i].cpu().numpy().astype(np.uint16)
+        tree_coordinates[i] = (tree_coordinates[i]/GAIN).cpu().numpy().astype(np.uint16)
 
     if config.verbose:
         toc = time.perf_counter()

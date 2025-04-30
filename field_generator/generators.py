@@ -54,18 +54,18 @@ def prob_to_treesize(prob_map, threshold, steepness=1.0, distribution_shift=0.0)
 
 # Draws a filled noisy circle on a tensor using vectorized operations.
 def generate_tree_sprites(treesize_map,
-                          tree_pixel_size,
+                          tree_sprite_size,
+                          tree_size,
+                          max_tree_size,
                           center_jitter=(0, 0),
-                          treesize_gain=1.2,
-                          max_radius=1.4,
                           noise_level=3.0,
-                          filter_size=7,
-                          filter_sigma=5.0):
+                          filter_size=5,
+                          filter_sigma=2.0):
     device = treesize_map.device
     batch_size = treesize_map.shape[0]
     map_N, map_M = treesize_map.shape[1], treesize_map.shape[2]
     # Sprite size
-    N = tree_pixel_size*2
+    N = tree_sprite_size*2
     # Generate random offsets
     if(center_jitter[0] == 0 and center_jitter[1] == 0):
         # No jitter
@@ -83,22 +83,24 @@ def generate_tree_sprites(treesize_map,
     y_coords = y_coords.unsqueeze(0).unsqueeze(0).expand(batch_size, map_N, map_M, -1, -1)
     x_offsets = tree_offsets[0].unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)
     y_offsets = tree_offsets[1].unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)
-    dist = torch.sqrt((x_coords - center[0] - x_offsets) ** 2 + (y_coords - center[1] - y_offsets) ** 2)/tree_pixel_size*2
+    dist = torch.sqrt((x_coords - center[0] - x_offsets) ** 2 + (y_coords - center[1] - y_offsets) ** 2)
 
     del x_coords, y_coords, x_offsets, y_offsets
     
     # Generate noisy radius values
     noise = (torch.rand(*treesize_map.shape, N, N, device=device) - 0.5) * 2 * noise_level # uniform noise between -noise_level and +noise_level
     noise = gaussian_filter(noise.view(-1, noise.shape[3], noise.shape[3]), filter_size, filter_sigma).view(*noise.shape)
-    noisy_radius = torch.clamp(treesize_map.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)*(1 + noise)*treesize_gain, 0, max_radius)
+    radius = treesize_map*tree_size
+    noisy_radius = torch.clamp(radius.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)+noise, 0, max_tree_size)
 
     del noise
     
     # Fill in the circle (set to color where distance <= noisy radius)
-    tree_sprites = (dist <= noisy_radius)*torch.sqrt(torch.clamp(noisy_radius**2-dist**2, 0, None)) # circle-like shading
+    tree_sprites = (dist <= noisy_radius)*torch.sqrt(torch.clamp(noisy_radius**2-dist**2, 0, None)/(tree_size**2)) # circle-like shading
     
     tree_offsets = tree_offsets.permute(1, 0, 2, 3) # permute to (batch_size, 2, N, N)
-    return tree_sprites, tree_offsets
+    sizes = radius*2
+    return tree_sprites, tree_offsets, sizes
 
 def _compose_stack(sprites, portion_num, overlap=(0, 0)):
     batch_size = sprites.shape[0]
@@ -151,11 +153,13 @@ def _stack_to_map(sprites, overlap=(0, 0)):
         fieldmap = torch.maximum(fieldmap, _compose_stack(sprites, i, overlap))
     return fieldmap
 
-def generate_field_mask(tree_sprites, field_size, distance):
+def generate_field_mask(tree_sprites, field_size, distance, offset):
+    distance = int(round(distance[0])), int(round(distance[1]))
     N, M = tree_sprites.shape[-2:]
     overlap = (N-distance[0], M-distance[1])
     # Put together tree sprites
     field_mask = _stack_to_map(tree_sprites, overlap=overlap)
+    field_mask = torch.nn.functional.pad(field_mask, (offset, 0, offset, 0), mode="constant")
     # Cut/expand the canvas to the size of the field
     result = torch.zeros((field_mask.shape[0], *field_size), device=tree_sprites.device)
     result[:, :min(field_size[0], field_mask.shape[1]), :min(field_size[1], field_mask.shape[2])] = field_mask[:, :field_size[0], :field_size[1]]
@@ -198,6 +202,7 @@ def project_shadow(tensor, iterations, strength, rad_dir, filter_size=21, filter
         projection_tensor = torch.maximum(projection_tensor, shifted_tensor)
 
     projection_tensor = gaussian_filter(projection_tensor, filter_size, filter_sigma).squeeze()
+    projection_tensor = normalize_positive_tensor(projection_tensor)
 
     return projection_tensor
 
@@ -219,7 +224,7 @@ def apply_lighting(field, field_gradient, strength, filter_size=7, filter_sigma=
 
     return field
 
-def bool_tensor_to_coords(bool_tensor, offsets, constant_offset, dx, dy) -> torch.Tensor:
+def bool_tensor_to_coords(bool_tensor, offsets, constant_offset, sizes, dx, dy) -> torch.Tensor:
     B = bool_tensor.shape[0]
     coords_list = []
 
@@ -230,7 +235,8 @@ def bool_tensor_to_coords(bool_tensor, offsets, constant_offset, dx, dy) -> torc
             continue
         y = indices[:, 0].float() * dy + constant_offset[1] + offsets[b][1, bool_tensor[b]].flatten()
         x = indices[:, 1].float() * dx + constant_offset[0] + offsets[b][0, bool_tensor[b]].flatten()
-        coords = torch.stack((x, y), dim=1)  # (N_i, 2)
+        s = sizes[b][bool_tensor[b]].flatten()
+        coords = torch.stack((x, y, s), dim=1)  # (N_i, 2)
         coords_list.append(coords)
 
     return coords_list

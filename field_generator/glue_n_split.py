@@ -37,7 +37,7 @@ def glue_together(image, coords, tile_number):
         for i in range(tile_number):
             for j in range(tile_number):
                 coor = coords[k*tile_number**2+i*tile_number+j]
-                newcoor_list.append(coor + np.array([j*image.shape[-2], i*image.shape[-1]]))
+                newcoor_list.append(coor + np.array([j*image.shape[-2], i*image.shape[-1], 0]))
         newcoords.append(np.concatenate(newcoor_list, axis=0))
     return newimage, newcoords
 
@@ -60,6 +60,7 @@ def rotate_coords(coords, origin, angle_deg):
         dx, dy = coor[:, 0] - origin[0], coor[:, 1] - origin[1]
         newcoor[:, 0] = origin[0] + dx * math.cos(-angle_rad) - dy * math.sin(-angle_rad)
         newcoor[:, 1] = origin[1] + dx * math.sin(-angle_rad) + dy * math.cos(-angle_rad)
+        newcoor[:, 2] = coor[:, 2]
         newcoords.append(newcoor)
     return newcoords
 
@@ -69,6 +70,7 @@ def crop_coordinates(coords, crop_left, crop_top, crop_width, crop_height):
         newcoor = np.zeros_like(coor)
         newcoor[:, 0] = coor[:, 0] - crop_left
         newcoor[:, 1] = coor[:, 1] - crop_top
+        newcoor[:, 2] = coor[:, 2]
         newcoor = newcoor[(newcoor[:, 0] >= 0) & (newcoor[:, 0] < crop_width) & (newcoor[:, 1] >= 0) & (newcoor[:, 1] < crop_height)]
         newcoords.append(newcoor)
     return newcoords
@@ -87,6 +89,7 @@ def split_n_crop(image, coords, tile_size):
                 newcoor = np.zeros_like(coor)
                 newcoor[:, 0] = coor[:, 0] - crop_left
                 newcoor[:, 1] = coor[:, 1] - crop_top
+                newcoor[:, 2] = coor[:, 2]
                 newcoor = newcoor[(newcoor[:, 0] >= 0) & (newcoor[:, 0] < tile_size) & (newcoor[:, 1] >= 0) & (newcoor[:, 1] < tile_size)]
                 newcoords.append(newcoor)
     newimage = np.array(newimage)
