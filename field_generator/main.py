@@ -1,8 +1,8 @@
 import os
 import numpy as np
-import time
 from argmanager import save_config_to_ini, get_parser_from_dict, update_config_from_args
 from field_generator import generate_field
+from postprocessing import postprocessing
 
 # --- Default configuration dictionary ---
 DEFAULT_CONFIG = {
@@ -45,7 +45,11 @@ DEFAULT_CONFIG = {
     "color_bkg_stain": (400, 280, 320, 800), # color of the background stains (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     "color_bkg_overlay": (550, 430, 420, 700), # color of the background overlays (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     "color_tree": (220, 280, 300, 1150), # color of the trees (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
-    "color_tree_shadow": (80, 120, 130, 550) # color of the tree shadows(R, G, B, NIF) ### maybe slight randomization + verification with the actual images
+    "color_tree_shadow": (80, 120, 130, 550), # color of the tree shadows(R, G, B, NIF) ### maybe slight randomization + verification with the actual images
+    ### POSTPROCESSING:
+    "tiles_per_side": 4, # number of tiles per side when glueing together the tiles (e.g., 2 -> 4 tiles, 3 -> 9 tiles, etc.)
+    "view_rotation_deg": 60, # rotation of the view (in degrees) ### randomization from 0 to 360
+    "tile_size": 256, # size of the tiles (in pixels)
 }
 
 def main():
@@ -67,11 +71,8 @@ def main():
         print(f"{k}: {v}")
 
     # Call main function
-    print("Generating field of trees...")
-    tic = time.perf_counter()
     outputs, coordinates, count = generate_field(**config)
-    toc = time.perf_counter()
-    print(f"Field of trees generated in {toc - tic:.2f} seconds.")
+    outputs, coordinates, count = postprocessing(outputs, coordinates, **config)
 
     # Save outputs and labels
     output_path = os.path.join("outputs", f"output.npy")
