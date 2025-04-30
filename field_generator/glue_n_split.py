@@ -48,7 +48,7 @@ def rotate_n_crop(image, angle_deg):
     radius = image.shape[-1]//2
     angle_rad_rest = angle_rad % (math.pi/2)
     crop_factor = (math.sqrt(2) - 1/math.cos(math.pi/4-angle_rad_rest))*math.cos(math.pi/4)
-    crop = math.ceil(crop_factor * radius)
+    crop = round(crop_factor * radius)
     image = v2.functional.crop(image, crop, crop, image.shape[-2]-crop*2, image.shape[-1]-crop*2)
     return np.array(image), crop
 

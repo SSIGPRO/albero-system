@@ -11,23 +11,24 @@ from glue_n_split import glue_together,\
 def postprocessing(batch, coordinates, **kwargs):
     config = SimpleNamespace(**kwargs)
 
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # Glue together multiple generated tiles
     newimage, newcoords = glue_together(batch, coordinates, config.tiles_per_side)
-
     # Rotate and crop the glued coordinates and the image
     newcoords = rotate_coords(newcoords, (newimage.shape[-2]//2, newimage.shape[-1]//2), config.view_rotation_deg)
     newimage, crop = rotate_n_crop(newimage, config.view_rotation_deg)
     newcoords = crop_coordinates(newcoords, crop, crop, newimage.shape[-2], newimage.shape[-1])
 
     # Split the image into tiles and crop the coordinates
-    newimage, newcoords = split_n_crop(newimage, newcoords, 256)
+    newimage, newcoords = split_n_crop(newimage, newcoords, config.tile_size)
 
     # Convert coordinates to tree counts
     treecount = coords_to_treecount(newcoords)
 
-    toc = time.perf_counter()
-    print(f"Postprocessing time: {toc - tic:0.4f} seconds")
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Postprocessing time: {toc - tic:0.4f} seconds")
 
     return newimage, newcoords, treecount

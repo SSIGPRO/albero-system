@@ -18,7 +18,8 @@ def generate_field(**kwargs):
     config = SimpleNamespace(**kwargs)
 
     ############################### Background color + overlay
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # generate background color
     canvas_shape = (config.batch_size,
@@ -33,19 +34,26 @@ def generate_field(**kwargs):
     ])
 
     # apply overlay 2 to background
+    overlay_margin = 5
     background_mask2 = torch.randn_like(field_channels[0])
-    background_mask2 = torch.sigmoid(gaussian_filter(background_mask2, 101, 16)*200-1)
+    background_mask2[..., :, :overlay_margin] = -1
+    background_mask2[..., :overlay_margin, :] = -1
+    background_mask2[..., :, -overlay_margin:] = -1
+    background_mask2[..., -overlay_margin:, :] = -1
+    background_mask2 = torch.sigmoid(gaussian_filter(background_mask2, 51, 16)*200-1)
     for i in range(4):
         field_channels[i] = field_channels[i]*(1-background_mask2) + config.color_bkg_overlay[i]*background_mask2
 
     # free gpu memory
     del background_mask2
 
-    toc = time.perf_counter()
-    print(f"Background color generation time: {toc - tic:0.4f} seconds")
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Background color generation time: {toc - tic:0.4f} seconds")
 
     ############################### Apply stains to background
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # Generate background stains map
     bkg_stain_map_shape = (config.batch_size, config.treemap_size[0], config.treemap_size[1]*3)
@@ -74,12 +82,14 @@ def generate_field(**kwargs):
 
     # free gpu memory
     del background_mask
-    
-    toc = time.perf_counter()
-    print(f"Background stains generation time: {toc - tic:0.4f} seconds")
+
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Background stains generation time: {toc - tic:0.4f} seconds")
 
     ############################### Apply noise to background
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # apply noise to bkg
     noise = torch.randn_like(field_channels[0])*config.bkg_noise_strength
@@ -88,11 +98,13 @@ def generate_field(**kwargs):
     # free gpu memory
     del noise
 
-    toc = time.perf_counter()
-    print(f"Background noise generation time: {toc - tic:0.4f} seconds")
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Background noise generation time: {toc - tic:0.4f} seconds")
 
     ############################### Generate field of trees
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # Generate probability maps
     prob_map = generate_probability_maps(prob_map_size=config.treemap_size,
@@ -116,10 +128,12 @@ def generate_field(**kwargs):
     # Free gpu memory
     del prob_map
 
-    toc = time.perf_counter()
-    print(f"Field of trees probability map generation time: {toc - tic:0.4f} seconds")
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Field of trees probability map generation time: {toc - tic:0.4f} seconds")
 
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # Generate tree sprites
     tree_sprites, tree_offsets = generate_tree_sprites(treesize_map=treesize_map,
@@ -140,11 +154,13 @@ def generate_field(**kwargs):
     # Free gpu memory
     del tree_sprites
 
-    toc = time.perf_counter()
-    print(f"Field of trees generation time: {toc - tic:0.4f} seconds")
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Field of trees generation time: {toc - tic:0.4f} seconds")
 
     ############################### Generate coordinates
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # Convert treebool_map to coordinate labels
     constant_offset = [config.field_generated_margin + config.tree_pixel_size]*2
@@ -154,11 +170,13 @@ def generate_field(**kwargs):
                                              config.tree_xspace,
                                              config.tree_yspace,)
     
-    toc = time.perf_counter()
-    print(f"Field of trees coordinates generation time: {toc - tic:0.4f} seconds")
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Field of trees coordinates generation time: {toc - tic:0.4f} seconds")
 
     ############################### Generate and apply projected shadows
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # Generate shadows mask
     field_shadows_mask = project_shadow(field_tree_mask,
@@ -170,30 +188,36 @@ def generate_field(**kwargs):
     for i in range(4):
         field_channels[i] = field_channels[i]*(1-field_shadows_mask) + config.color_tree_shadow[i]*field_shadows_mask
 
-    toc = time.perf_counter()
-    print(f"Projected shadows generation time: {toc - tic:0.4f} seconds")
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Projected shadows generation time: {toc - tic:0.4f} seconds")
 
     ############################### Background gaussian blur
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # smooth background
     field_channels = gaussian_filter(field_channels, 9, 2.0)
 
-    toc = time.perf_counter()
-    print(f"Background gaussian blur time: {toc - tic:0.4f} seconds")
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Background gaussian blur time: {toc - tic:0.4f} seconds")
 
     ############################### Put trees on the field
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # Put trees on the field
     for i in range(4):
         field_channels[i] = field_channels[i]*(1-field_tree_mask) + config.color_tree[i]*field_tree_mask
 
-    toc = time.perf_counter()
-    print(f"Trees generation time: {toc - tic:0.4f} seconds")
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Trees generation time: {toc - tic:0.4f} seconds")
 
     ############################### Apply shadowing on the trees
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # Compute field gradient
     field_gradient = compute_gradient_map(field_tree_mask,
@@ -208,11 +232,13 @@ def generate_field(**kwargs):
     # Free gpu memory
     del field_gradient
 
-    toc = time.perf_counter()
-    print(f"Shadowing generation time: {toc - tic:0.4f} seconds")
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Shadowing generation time: {toc - tic:0.4f} seconds")
 
     ############################### Final touches
-    tic = time.perf_counter()
+    if config.verbose:
+        tic = time.perf_counter()
 
     # Apply filter
     field_channels = gaussian_filter(field_channels, 9, 1.0)
@@ -234,7 +260,8 @@ def generate_field(**kwargs):
         tree_coordinates[i][:, 1] = tree_coordinates[i][:, 1]*float(config.output_size[1])/float(config.field_generated_size[1]+2*config.field_generated_margin)
         tree_coordinates[i] = tree_coordinates[i].cpu().numpy().astype(np.uint16)
 
-    toc = time.perf_counter()
-    print(f"Final touches generation time: {toc - tic:0.4f} seconds")
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Final touches generation time: {toc - tic:0.4f} seconds")
 
     return output, tree_coordinates, tree_count

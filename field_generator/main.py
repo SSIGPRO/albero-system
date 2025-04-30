@@ -6,6 +6,7 @@ from postprocessing import postprocessing
 
 # --- Default configuration dictionary ---
 DEFAULT_CONFIG = {
+    "verbose": True, # verbosity of the output
     "batch_size": 32,
     "output_size": (600, 600), # size of the output image ### modify depending on the model (600x600 might be too big)
     "output_dir": "outputs", # directory to save the generated images
@@ -48,7 +49,7 @@ DEFAULT_CONFIG = {
     "color_tree_shadow": (80, 120, 130, 550), # color of the tree shadows(R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     ### POSTPROCESSING:
     "tiles_per_side": 4, # number of tiles per side when glueing together the tiles (e.g., 2 -> 4 tiles, 3 -> 9 tiles, etc.)
-    "view_rotation_deg": 60, # rotation of the view (in degrees) ### randomization from 0 to 360
+    "view_rotation_deg": 30, # rotation of the view (in degrees) ### randomization from 0 to 360
     "tile_size": 256, # size of the tiles (in pixels)
 }
 
@@ -66,9 +67,10 @@ def main():
     save_config_to_ini(config, os.path.join(config["output_dir"], "config.ini"))
 
     # Print configuration
-    print("Configuration:")
-    for k, v in config.items():
-        print(f"{k}: {v}")
+    if config["verbose"]:
+        print("Configuration:")
+        for k, v in config.items():
+            print(f"{k}: {v}")
 
     # Call main function
     outputs, coordinates, count = generate_field(**config)

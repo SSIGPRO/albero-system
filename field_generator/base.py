@@ -1,4 +1,5 @@
 import torch
+from torchvision.transforms import v2 
 
 # Base kernels
 
@@ -30,5 +31,11 @@ def gaussian_filter(input, kernel_size, sigma):
         if input.shape[1] > 1:
             kernel = kernel.repeat([input.shape[1], 1, 1, 1])
             groups = input.shape[1]
-    tmp = torch.nn.functional.conv2d(input, kernel, padding="same", groups=groups)
+    # pad input to avoid border effects
+    pad = kernel.shape[-1] // 2
+    tmp = torch.nn.functional.pad(input, (pad, pad, pad, pad), mode="replicate")
+    # apply the kernel
+    tmp = torch.nn.functional.conv2d(tmp, kernel, padding="same", groups=groups)
+    # crop the output to the original size
+    tmp = v2.functional.crop(tmp, pad, pad, input.shape[-2], input.shape[-1])
     return tmp
