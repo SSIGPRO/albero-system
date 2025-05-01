@@ -41,8 +41,8 @@ DEFAULT_CONFIG = {
     ### BACKGROUND:
     "bkg_stain_pixel_size": 10, # size of each background stains in pixels
     "bkg_stain_center_jitter": 2, # jitter of the background stains center (in pixels)
-    "bkg_stain_strength_min": 0.2, # minimum strength of the background stains
-    "bkg_stain_strength": 0.8, # maximum strength of the background stains
+    "bkg_stain_strength_min": 0.3, # minimum strength of the background stains
+    "bkg_stain_strength": 1.0, # maximum strength of the background stains
     "bkg_stain_offset": 15, # x and y offset of the background stains (in pixels)
     "bkg_noise_strength": 0.1, # strength of the noise added to the background    
     ### SHADOWS AND LIGHTING:

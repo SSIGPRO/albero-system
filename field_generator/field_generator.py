@@ -249,7 +249,7 @@ def generate_field(**kwargs):
         tic = time.perf_counter()
 
     # Apply filter
-    field_channels = gaussian_filter(field_channels, 9, 1.0)
+    # field_channels = gaussian_filter(field_channels, 7, 0.8)
 
     # Swap batch and channel dimensions
     field_channels = field_channels.permute(1, 0, 2, 3)
