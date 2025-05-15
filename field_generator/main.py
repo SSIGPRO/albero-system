@@ -10,11 +10,12 @@ DEFAULT_CONFIG = {
     "output_dir": "outputs", # directory to save the generated images
     "device": "cuda:0", # device to use for computation (e.g., "cuda:0", "cpu")
     ### FIELD SIZE:
-    "batch_size": 32,
-    "field_size": (600, 600), # size of the output field in pixels
+    "batch_size": 1,
+    "total_fields": 9,
+    "field_size": (660, 660), # size of the output field in pixels
     "field_generation_zoom": 2, # zoom factor for the field generation
     ### TREE MAP:
-    "treemap_size": (52, 104), # number of trees (rows, columns)
+    "treemap_size": (48, 99), # number of trees (rows, columns)
     "treemap_filter_size": 51, # size of the filter of the gaussian probability map
     "treemap_filter_sigma": 6,  # sigma of the filter of the gaussian probability map ### maybe slight randomization
     "treemap_noise_strength": 0.1, # strenght of final gaussian noise added to the map ### maybe slight randomization
@@ -27,14 +28,14 @@ DEFAULT_CONFIG = {
     "tree_threshold": 0.5, # threshold for tree existence (1 -> no trees, 0 -> all trees) ### randomization from 0 to 1
     "tree_sprite_size": 20, # size of each tree sprite in pixels
     "tree_center_jitter": 2, # jitter of the tree center (in pixels) ### maybe slight randomization (integer positive numbers)
-    "tree_offset": 0, # offset (x and y of the same value) of the first top left tree (in pixels) ### maybe slight randomization (integer positive numbers)
-    "tree_xspace": 5.5, # x space between trees (in float pixels)
-    "tree_yspace": 11.0, # y space between trees (in float pixels)
+    "tree_offset": -5, # offset (x and y of the same value) of the first top left tree (in pixels) ### maybe slight randomization (integer positive numbers)
+    "tree_xspace": 6.5, # x space between trees (in float pixels)
+    "tree_yspace": 13.5, # y space between trees (in float pixels)
     "tree_steepness": 4.0, # steepness of the variation of tree size with respect to the probability map ### maybe slight randomization
     "tree_distribution_shift": 0.0, # shift of the variation of tree size with respect to the probability map ### maybe slight randomization (-0.5 to 0.5)
     ### TREE SHAPE:
-    "treeshape_size": 5, # tree size in pixels ### maybe slight randomization
-    "treeshape_max_size": 7, # maximum tree size (after noise is added)
+    "treeshape_size": 4.5, # tree size in pixels ### maybe slight randomization
+    "treeshape_max_size": 6, # maximum tree size (after noise is added)
     "treeshape_noise": 2, # noisyness of the tree shape (maximum amount in pixels)
     "treeshape_filter_size": 5, # size of the filter to smooth the tree shape
     "treeshape_filter_sigma": 2.0, # sigma of the filter to smooth the tree shape
@@ -57,8 +58,8 @@ DEFAULT_CONFIG = {
     "color_tree": (220, 280, 300, 1150), # color of the trees (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     "color_tree_shadow": (80, 120, 130, 550), # color of the tree shadows(R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     ### POSTPROCESSING:
-    "tiles_per_side": 4, # number of tiles per side when glueing together the tiles (e.g., 2 -> 4 tiles, 3 -> 9 tiles, etc.)
-    "view_rotation_deg": 25, # rotation of the view (in degrees) ### randomization from 0 to 360
+    "tiles_per_side": 3, # number of tiles per side when glueing together the tiles (e.g., 2 -> 4 tiles, 3 -> 9 tiles, etc.)
+    "view_rotation_deg": 20, # rotation of the view (in degrees) ### randomization from 0 to 360
     "tile_size": 256, # size of the tiles (in pixels)
 }
 
@@ -82,7 +83,19 @@ def main():
             print(f"{k}: {v}")
 
     # Call main function
-    outputs, coordinates, count = generate_field(**config)
+    outputs_list = []
+    coordinates_list = []
+    count_list = []
+    for _ in range(config["total_fields"]//config["batch_size"]):
+        outputs, coordinates, count = generate_field(**config)
+        outputs_list.append(outputs)
+        coordinates_list += coordinates
+        count_list += count
+
+    outputs = np.concatenate(outputs_list)
+    coordinates = coordinates_list
+    count = count_list
+
     outputs, coordinates, count = postprocessing(outputs, coordinates, **config)
 
     # Save outputs and labels
