@@ -46,16 +46,17 @@ def generate_probability_maps(prob_map_size,
 
         return prob_map
 
-def prob_to_treesize(prob_map, threshold, steepness=1.0, distribution_shift=0.0):
+def prob_to_treesize(prob_map, threshold, treeshape_min_size, treeshape_size, treeshape_max_size, steepness=1.0, distribution_shift=0.0):
     tree_boolmap = prob_map > threshold
     tree_count = torch.sum(tree_boolmap.view(tree_boolmap.shape[0], -1), axis=-1)
-    treesize_map = torch.nn.functional.sigmoid(6*(prob_map-threshold)*steepness+distribution_shift)*tree_boolmap.to(torch.float32)
+    treesize_map = torch.nn.functional.sigmoid((prob_map-threshold)/(1-threshold)*steepness+distribution_shift)*treeshape_size
+    treesize_map = torch.clamp(treesize_map, treeshape_min_size, treeshape_max_size)
+    treesize_map = treesize_map*tree_boolmap.to(torch.float32)
     return treesize_map, tree_boolmap, tree_count
 
 # Draws a filled noisy circle on a tensor using vectorized operations.
 def generate_tree_sprites(treesize_map,
                           tree_sprite_size,
-                          tree_size,
                           max_tree_size,
                           center_jitter=(0, 0),
                           noise_level=3.0,
@@ -90,13 +91,13 @@ def generate_tree_sprites(treesize_map,
     # Generate noisy radius values
     noise = (torch.rand(*treesize_map.shape, N, N, device=device) - 0.5) * 2 * noise_level # uniform noise between -noise_level and +noise_level
     noise = gaussian_filter(noise.view(-1, noise.shape[3], noise.shape[3]), filter_size, filter_sigma).view(*noise.shape)
-    radius = treesize_map*tree_size
+    radius = treesize_map
     noisy_radius = torch.clamp(radius.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)+noise, 0, max_tree_size)
 
     del noise
     
     # Fill in the circle (set to color where distance <= noisy radius)
-    tree_sprites = (dist <= noisy_radius)*torch.sqrt(torch.clamp(noisy_radius**2-dist**2, 0, None)/(tree_size**2)) # circle-like shading
+    tree_sprites = (dist <= noisy_radius)*torch.sqrt(torch.clamp(noisy_radius**2-dist**2, 0, None)/(torch.max(noisy_radius)**2)) # circle-like shading
     
     tree_offsets = tree_offsets.permute(1, 0, 2, 3) # permute to (batch_size, 2, N, N)
     sizes = radius*2

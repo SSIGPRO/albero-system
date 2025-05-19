@@ -12,10 +12,10 @@ DEFAULT_CONFIG = {
     ### FIELD SIZE:
     "batch_size": 1,
     "total_fields": 9,
-    "field_size": (660, 660), # size of the output field in pixels
+    "field_size": (680, 680), # size of the output field in pixels
     "field_generation_zoom": 2, # zoom factor for the field generation
     ### TREE MAP:
-    "treemap_size": (48, 99), # number of trees (rows, columns)
+    "treemap_size": (48, 80), # number of trees (rows, columns)
     "treemap_filter_size": 51, # size of the filter of the gaussian probability map
     "treemap_filter_sigma": 6,  # sigma of the filter of the gaussian probability map ### maybe slight randomization
     "treemap_noise_strength": 0.1, # strenght of final gaussian noise added to the map ### maybe slight randomization
@@ -27,15 +27,16 @@ DEFAULT_CONFIG = {
     ### TREE SPRITE SIZE AND POSITIONING:
     "tree_threshold": 0.5, # threshold for tree existence (1 -> no trees, 0 -> all trees) ### randomization from 0 to 1
     "tree_sprite_size": 20, # size of each tree sprite in pixels
-    "tree_center_jitter": 2, # jitter of the tree center (in pixels) ### maybe slight randomization (integer positive numbers)
-    "tree_offset": -5, # offset (x and y of the same value) of the first top left tree (in pixels) ### maybe slight randomization (integer positive numbers)
-    "tree_xspace": 6.5, # x space between trees (in float pixels)
+    "tree_center_jitter": 1, # jitter of the tree center (in pixels) ### maybe slight randomization (integer positive numbers)
+    "tree_offset": 5, # offset (x and y of the same value) of the first top left tree (in pixels) ### maybe slight randomization (integer positive numbers)
+    "tree_xspace": 8, # x space between trees (in float pixels)
     "tree_yspace": 13.5, # y space between trees (in float pixels)
-    "tree_steepness": 4.0, # steepness of the variation of tree size with respect to the probability map ### maybe slight randomization
+    "tree_steepness": 24.0, # steepness of the variation of tree size with respect to the probability map ### maybe slight randomization
     "tree_distribution_shift": 0.0, # shift of the variation of tree size with respect to the probability map ### maybe slight randomization (-0.5 to 0.5)
     ### TREE SHAPE:
-    "treeshape_size": 4.5, # tree size in pixels ### maybe slight randomization
-    "treeshape_max_size": 6, # maximum tree size (after noise is added)
+    "treeshape_size": 4.5, # average tree size in pixels ### maybe slight randomization
+    "treeshape_min_size": 3, # minimum tree size
+    "treeshape_max_size": 6, # maximum tree size
     "treeshape_noise": 2, # noisyness of the tree shape (maximum amount in pixels)
     "treeshape_filter_size": 5, # size of the filter to smooth the tree shape
     "treeshape_filter_sigma": 2.0, # sigma of the filter to smooth the tree shape
@@ -47,8 +48,8 @@ DEFAULT_CONFIG = {
     "bkg_stain_offset": 15, # x and y offset of the background stains (in pixels)
     "bkg_noise_strength": 0.1, # strength of the noise added to the background    
     ### SHADOWS AND LIGHTING:
-    "shadow_direction": 2.0, # direction of the light source (in radians) ### randomization 0 to 2pi
-    "shadow_length": 7, # length of the shadow (in pixels) ### randomization 0 to 20 (integer positive numbers)
+    "shadow_direction": 1.0, # direction of the light source (in radians) ### randomization 0 to 2pi
+    "shadow_length": 10, # length of the shadow (in pixels) ### randomization 0 to 20 (integer positive numbers)
     "shadow_iterations": 5, # iterations employed to produce the shadow
     "shadow_blending_strength": 0.2, # strength on the light/shadow effect on the tree sprite
     # COLORS:

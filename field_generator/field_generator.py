@@ -62,9 +62,8 @@ def generate_field(**kwargs):
     bkg_stain_map = torch.rand(bkg_stain_map_shape, device=config.device)*(config.bkg_stain_strength-config.bkg_stain_strength_min)+config.bkg_stain_strength_min
 
     # Generate background stains sprites
-    bkg_stain_sprites, _, _ = generate_tree_sprites(bkg_stain_map,
+    bkg_stain_sprites, _, _ = generate_tree_sprites(bkg_stain_map*5,
                                                     tree_sprite_size=config.bkg_stain_pixel_size,
-                                                    tree_size=5,
                                                     max_tree_size=10,
                                                     center_jitter=[config.bkg_stain_center_jitter]*2)
 
@@ -126,6 +125,9 @@ def generate_field(**kwargs):
     # Generate tree size map and number of trees labels
     treesize_map, tree_boolmap, tree_count = prob_to_treesize(prob_map, 
                                                               threshold=config.tree_threshold,
+                                                              treeshape_min_size=config.treeshape_min_size*GAIN,
+                                                              treeshape_size=config.treeshape_size*GAIN,
+                                                              treeshape_max_size=config.treeshape_max_size*GAIN,
                                                               steepness=config.tree_steepness,
                                                               distribution_shift=config.tree_distribution_shift)
     
@@ -141,7 +143,6 @@ def generate_field(**kwargs):
 
     # Generate tree sprites
     tree_sprites, tree_offsets, tree_sizes = generate_tree_sprites(treesize_map=treesize_map,
-                                                                   tree_size=config.treeshape_size*GAIN,
                                                                    max_tree_size=config.treeshape_max_size*GAIN,
                                                                    tree_sprite_size=config.tree_sprite_size*GAIN,
                                                                    center_jitter=(config.tree_center_jitter*GAIN, config.tree_center_jitter*GAIN),
