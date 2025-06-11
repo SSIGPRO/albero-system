@@ -59,6 +59,7 @@ def generate_tree_sprites(treesize_map,
                           tree_sprite_size,
                           max_tree_size,
                           center_jitter=(0, 0),
+                          alternate_offset=0,
                           noise_level=3.0,
                           filter_size=5,
                           filter_sigma=2.0):
@@ -75,6 +76,11 @@ def generate_tree_sprites(treesize_map,
     else:
         tree_offsets = torch.stack((torch.randint_like(treesize_map, low=-center_jitter[0], high=center_jitter[0]),
                                     torch.randint_like(treesize_map, low=-center_jitter[1], high=center_jitter[1])))
+        
+    # Add alternate offset to odd rows
+    if alternate_offset > 0:
+        tree_offsets[0, :, 1::2] += alternate_offset
+
     # Center of the circle
     center = (N//2, N//2)
     y_coords, x_coords = torch.meshgrid(torch.arange(N, device=device), torch.arange(N, device=device), indexing='ij')

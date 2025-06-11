@@ -1,6 +1,8 @@
 import numpy as np
 import time
 from types import SimpleNamespace
+import torch
+from base import gaussian_filter
 from glue_n_split import glue_together,\
                          rotate_n_crop,\
                          rotate_coords,\
@@ -24,6 +26,9 @@ def postprocessing(batch, coordinates, **kwargs):
 
     # Split the image into tiles and crop the coordinates
     newimage, newcoords = split_n_crop(newimage, newcoords, config.tile_size)
+
+    # Apply filter to smooth borders
+    newimage = gaussian_filter(torch.tensor(newimage, device=config.device, dtype=torch.float32), 7, 0.8).cpu().numpy()
 
     # Convert coordinates to tree counts
     treecount = coords_to_treecount(newcoords)

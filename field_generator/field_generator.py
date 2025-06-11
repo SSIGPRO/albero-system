@@ -2,6 +2,7 @@ import torch
 from torchvision.transforms import v2
 import numpy as np
 import time
+import random
 from base import gaussian_filter, normalize_tensor, normalize_positive_tensor
 from types import SimpleNamespace
 from generators import generate_probability_maps,\
@@ -22,6 +23,19 @@ def generate_field(**kwargs):
 
     GAIN = config.field_generation_zoom
     CANVAS_SIZE = config.field_size[0]*GAIN, config.field_size[1]*GAIN
+
+    # select color from list
+    def get_random_color(color_list):
+        return_value = color_list
+        if type(color_list) is list:
+            if type(color_list[0]) is tuple or type(color_list[0]) is list:
+                return_value = random.choice(color_list)
+        return return_value
+    
+    color_bkg = get_random_color(config.color_bkg)
+    color_bkg_overlay = get_random_color(config.color_bkg_overlay)
+    color_tree = get_random_color(config.color_tree)
+    color_tree_shadow = get_random_color(config.color_tree_shadow)
     
     # generate background color
     canvas_shape = (config.batch_size,
@@ -29,22 +43,22 @@ def generate_field(**kwargs):
                     CANVAS_SIZE[1])
     
     field_channels = torch.stack([
-        torch.full(canvas_shape, config.color_bkg[0], device=config.device, dtype=torch.float32),
-        torch.full(canvas_shape, config.color_bkg[1], device=config.device, dtype=torch.float32),
-        torch.full(canvas_shape, config.color_bkg[2], device=config.device, dtype=torch.float32),
-        torch.full(canvas_shape, config.color_bkg[3], device=config.device, dtype=torch.float32)
+        torch.full(canvas_shape, color_bkg[0], device=config.device, dtype=torch.float32),
+        torch.full(canvas_shape, color_bkg[1], device=config.device, dtype=torch.float32),
+        torch.full(canvas_shape, color_bkg[2], device=config.device, dtype=torch.float32),
+        torch.full(canvas_shape, color_bkg[3], device=config.device, dtype=torch.float32)
     ])
 
     # apply overlay to background
-    overlay_margin = 1
+    # overlay_margin = 0
     background_mask2 = torch.randn_like(field_channels[0])
-    background_mask2[..., :, :overlay_margin] = -1
-    background_mask2[..., :overlay_margin, :] = -1
-    background_mask2[..., :, -overlay_margin:] = -1
-    background_mask2[..., -overlay_margin:, :] = -1
-    background_mask2 = torch.sigmoid(gaussian_filter(background_mask2, 25, 8.0)*100-1)
+    # background_mask2[..., :, :overlay_margin] = 0
+    # background_mask2[..., :overlay_margin, :] = 0
+    # background_mask2[..., :, -overlay_margin:] = 0
+    # background_mask2[..., -overlay_margin:, :] = 0
+    background_mask2 = torch.sigmoid(gaussian_filter(background_mask2, config.bkg_overlay_filter_size*GAIN, config.bkg_overlay_filter_sigma*GAIN)*100-1)
     for i in range(4):
-        field_channels[i] = field_channels[i]*(1-background_mask2) + config.color_bkg_overlay[i]*background_mask2
+        field_channels[i] = field_channels[i]*(1-background_mask2) + color_bkg_overlay[i]*background_mask2
 
     # free gpu memory
     del background_mask2
@@ -54,41 +68,41 @@ def generate_field(**kwargs):
         print(f"Background color generation time: {toc - tic:0.4f} seconds")
 
     ############################### Apply stains to background
-    if config.verbose:
-        tic = time.perf_counter()
+    # if config.verbose:
+    #     tic = time.perf_counter()
 
-    # Generate background stains map
-    bkg_stain_map_shape = (config.batch_size, config.treemap_size[0], config.treemap_size[1]*3)
-    bkg_stain_map = torch.rand(bkg_stain_map_shape, device=config.device)*(config.bkg_stain_strength-config.bkg_stain_strength_min)+config.bkg_stain_strength_min
+    # # Generate background stains map
+    # bkg_stain_map_shape = (config.batch_size, config.treemap_size[0], config.treemap_size[1]*3)
+    # bkg_stain_map = torch.rand(bkg_stain_map_shape, device=config.device)*(config.bkg_stain_strength-config.bkg_stain_strength_min)+config.bkg_stain_strength_min
 
-    # Generate background stains sprites
-    bkg_stain_sprites, _, _ = generate_tree_sprites(bkg_stain_map*5,
-                                                    tree_sprite_size=config.bkg_stain_pixel_size,
-                                                    max_tree_size=10,
-                                                    center_jitter=[config.bkg_stain_center_jitter]*2)
+    # # Generate background stains sprites
+    # bkg_stain_sprites, _, _ = generate_tree_sprites(bkg_stain_map*5,
+    #                                                 tree_sprite_size=config.bkg_stain_pixel_size,
+    #                                                 max_tree_size=10,
+    #                                                 center_jitter=[config.bkg_stain_center_jitter]*2)
 
-    # Free gpu memory
-    del bkg_stain_map
+    # # Free gpu memory
+    # del bkg_stain_map
 
-    # Generate field background stains mask
-    background_mask = generate_field_mask(bkg_stain_sprites,
-                                          CANVAS_SIZE,
-                                          distance=(config.tree_xspace*GAIN//3, config.tree_yspace*GAIN),
-                                          offset=config.bkg_stain_offset*GAIN)
+    # # Generate field background stains mask
+    # background_mask = generate_field_mask(bkg_stain_sprites,
+    #                                       CANVAS_SIZE,
+    #                                       distance=(config.tree_xspace*GAIN//3, config.tree_yspace*GAIN),
+    #                                       offset=config.bkg_stain_offset*GAIN)
 
-    # Free gpu memory
-    del bkg_stain_sprites
+    # # Free gpu memory
+    # del bkg_stain_sprites
 
-    # apply stains to background
-    for i in range(4):
-        field_channels[i] = field_channels[i]*(1-background_mask) + config.color_bkg_overlay[i]*background_mask
+    # # apply stains to background
+    # for i in range(4):
+    #     field_channels[i] = field_channels[i]*(1-background_mask) + color_bkg_stain[i]*background_mask
 
-    # free gpu memory
-    del background_mask
+    # # free gpu memory
+    # del background_mask
 
-    if config.verbose:
-        toc = time.perf_counter()
-        print(f"Background stains generation time: {toc - tic:0.4f} seconds")
+    # if config.verbose:
+    #     toc = time.perf_counter()
+    #     print(f"Background stains generation time: {toc - tic:0.4f} seconds")
 
     ############################### Apply noise to background
     if config.verbose:
@@ -146,9 +160,10 @@ def generate_field(**kwargs):
                                                                    max_tree_size=config.treeshape_max_size*GAIN,
                                                                    tree_sprite_size=config.tree_sprite_size*GAIN,
                                                                    center_jitter=(config.tree_center_jitter*GAIN, config.tree_center_jitter*GAIN),
+                                                                   alternate_offset=config.tree_alternate_offset*GAIN,
                                                                    noise_level=config.treeshape_size*GAIN,
-                                                                   filter_size=config.treeshape_filter_size,
-                                                                   filter_sigma=config.treeshape_filter_sigma,)
+                                                                   filter_size=config.treeshape_filter_size*GAIN,
+                                                                   filter_sigma=config.treeshape_filter_sigma*GAIN,)
     
     # Free gpu memory
     del treesize_map
@@ -184,22 +199,23 @@ def generate_field(**kwargs):
         print(f"Field of trees coordinates generation time: {toc - tic:0.4f} seconds")
 
     ############################### Generate and apply projected shadows
-    if config.verbose:
-        tic = time.perf_counter()
+    if config.shadow_length > 0:
+        if config.verbose:
+            tic = time.perf_counter()
 
-    # Generate shadows mask
-    field_shadows_mask = project_shadow(field_tree_mask,
-                                        config.shadow_iterations,
-                                        config.shadow_length*GAIN,
-                                        config.shadow_direction)
+        # Generate shadows mask
+        field_shadows_mask = project_shadow(field_tree_mask,
+                                            config.shadow_iterations,
+                                            config.shadow_length*GAIN,
+                                            config.shadow_direction)
 
-    # apply projected shadows to backgroud
-    for i in range(4):
-        field_channels[i] = field_channels[i]*(1-field_shadows_mask) + config.color_tree_shadow[i]*field_shadows_mask
+        # apply projected shadows to backgroud
+        for i in range(4):
+            field_channels[i] = field_channels[i]*(1-field_shadows_mask) + color_tree_shadow[i]*field_shadows_mask
 
-    if config.verbose:
-        toc = time.perf_counter()
-        print(f"Projected shadows generation time: {toc - tic:0.4f} seconds")
+        if config.verbose:
+            toc = time.perf_counter()
+            print(f"Projected shadows generation time: {toc - tic:0.4f} seconds")
 
     ############################### Background gaussian blur
     if config.verbose:
@@ -218,7 +234,7 @@ def generate_field(**kwargs):
 
     # Put trees on the field
     for i in range(4):
-        field_channels[i] = field_channels[i]*(1-field_tree_mask) + config.color_tree[i]*field_tree_mask
+        field_channels[i] = field_channels[i]*(1-field_tree_mask) + color_tree[i]*field_tree_mask
 
     if config.verbose:
         toc = time.perf_counter()
@@ -248,9 +264,6 @@ def generate_field(**kwargs):
     ############################### Final touches
     if config.verbose:
         tic = time.perf_counter()
-
-    # Apply filter
-    # field_channels = gaussian_filter(field_channels, 7, 0.8)
 
     # Swap batch and channel dimensions
     field_channels = field_channels.permute(1, 0, 2, 3)
