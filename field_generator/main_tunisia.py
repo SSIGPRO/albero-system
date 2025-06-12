@@ -11,28 +11,29 @@ DEFAULT_CONFIG = {
     "device": "cuda:0", # device to use for computation (e.g., "cuda:0", "cpu")
     ### FIELD SIZE:
     "batch_size": 1,
-    "total_fields": 16,
-    "field_size": (300, 300), # size of the output field in pixels
+    "total_fields": 1,
+    "field_size": (400, 400), # size of the output field in pixels
     "field_generation_zoom": 2, # zoom factor for the field generation
     ### TREE MAP:
-    "treemap_size": (21, 17), # number of trees (rows, columns)
+    "treemap_size": (40, 40), # number of trees (rows, columns)
     "treemap_filter_size": 51, # size of the filter of the gaussian probability map
     "treemap_filter_sigma": 6,  # sigma of the filter of the gaussian probability map ### maybe slight randomization
     "treemap_noise_strength": 0.1, # strenght of final gaussian noise added to the map ### maybe slight randomization
-    "treemap_sparse_remove_rate": 0.05, # rate of the sparse values to be minimized ### maybe slight randomization
+    "treemap_sparse_remove_rate": 0.1, # rate of the sparse values to be minimized ### maybe slight randomization
     "treemap_sparse_add_rate": 0.05, # rate of the sparse values to be maximized ### maybe slight randomization
-    "treemap_column_prune_rate": 0.01, # rate of the columns to be pruned ### maybe slight randomization
+    "treemap_row_prune_rate": 0.05, # rate of the rows to be pruned ### maybe slight randomization
+    "treemap_column_prune_rate": 0.05, # rate of the columns to be pruned ### maybe slight randomization
     "treemap_final_filter_size": 21, # size of the final filter
     "treemap_final_filter_sigma": 0.5, # sigma of the final filter
     ### TREE SPRITE SIZE AND POSITIONING:
-    "tree_threshold": 0.3, # threshold for tree existence (1 -> no trees, 0 -> all trees) ### randomization from 0 to 1
+    "tree_threshold": 0.4, # threshold for tree existence (1 -> no trees, 0 -> all trees) ### randomization from 0 to 1
     "tree_sprite_size": 20, # size of each tree sprite in pixels
     "tree_center_jitter": 1, # jitter of the tree center (in pixels) ### maybe slight randomization (integer positive numbers)
     "tree_offset": -10, # offset (x and y of the same value) of the first top left tree (in pixels) ### maybe slight randomization (integer positive numbers)
     "tree_alternate_offset": 8, # offset applied only to odd rows
     "tree_xspace": 17, # x space between trees (in float pixels)
     "tree_yspace": 14, # y space between trees (in float pixels)
-    "tree_steepness": 12.0, # steepness of the variation of tree size with respect to the probability map ### maybe slight randomization
+    "tree_steepness": 2.0, # steepness of the variation of tree size with respect to the probability map ### maybe slight randomization
     "tree_distribution_shift": 0.0, # shift of the variation of tree size with respect to the probability map ### maybe slight randomization (-0.5 to 0.5)
     ### TREE SHAPE:
     "treeshape_size": 4.5, # average tree size in pixels ### maybe slight randomization
@@ -43,26 +44,37 @@ DEFAULT_CONFIG = {
     "treeshape_filter_sigma": 1.0, # sigma of the filter to smooth the tree shape
     ### BACKGROUND:
     "bkg_overlay_filter_size": 25, # size of the filter to smooth the background overlay
-    "bkg_overlay_filter_sigma": 20.0, # sigma of the filter to smooth the background overlay
+    "bkg_overlay_filter_sigma": [2.0, 5.0, 10.0, 20.0], # sigma of the filter to smooth the background overlay
+    "bkg_overlay_strength": 0.6, # strength of the background overlay
     # "bkg_stain_pixel_size": 10, # size of each background stains in pixels
     # "bkg_stain_center_jitter": 2, # jitter of the background stains center (in pixels)
     # "bkg_stain_strength_min": 0.3, # minimum strength of the background stains
     # "bkg_stain_strength": 1.0, # maximum strength of the background stains
     # "bkg_stain_offset": 15, # x and y offset of the background stains (in pixels)
-    "bkg_noise_strength": 0.1, # strength of the noise added to the background    
+    "bkg_noise_strength": 0.1, # strength of the noise added to the background
+    "bkg_patches_passes_min": 8, # minimum number of passes for the background patches
+    "bkg_patches_passes_max": 16, # maximum number of passes for the background patches
     ### SHADOWS AND LIGHTING:
     "shadow_direction": 1.0, # direction of the light source (in radians) ### randomization 0 to 2pi
-    "shadow_length": 1, # length of the shadow (in pixels) ### randomization 0 to 20 (integer positive numbers)
+    "shadow_length": 5, # length of the shadow (in pixels) ### randomization 0 to 20 (integer positive numbers)
     "shadow_iterations": 5, # iterations employed to produce the shadow
-    "shadow_blending_strength": 0.2, # strength on the light/shadow effect on the tree sprite
+    "shadow_blending_strength": 0.3, # strength on the light/shadow effect on the tree sprite
     # COLORS:
-    "color_bkg": [(700, 520, 420, 800), (750, 500, 400, 850)], # color of the background(R, G, B, NIF) ### maybe slight randomization + verification with the actual images
+    "color_bkg": [(700, 520, 420, 800),
+                  (750, 500, 400, 850)], # color of the background(R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     # "color_bkg_stain": (400, 280, 320, 800), # color of the background stains (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
-    "color_bkg_overlay": (550, 430, 420, 700), # color of the background overlays (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
+    "color_bkg_overlay": [(550, 430, 420, 700),
+                          (400, 280, 320, 800),
+                          (300, 200, 150, 400),
+                          (500, 300, 200, 450)], # color of the background overlays (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
+    "color_bkg_patches": [(550, 430, 420, 700),
+                          (400, 280, 320, 800),
+                          (300, 200, 150, 400),
+                          (500, 300, 200, 450)], # color of the background patches (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     "color_tree": (220, 280, 300, 1150), # color of the trees (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     "color_tree_shadow": (80, 120, 130, 550), # color of the tree shadows(R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     ### POSTPROCESSING:
-    "tiles_per_side": 4, # number of tiles per side when glueing together the tiles (e.g., 2 -> 4 tiles, 3 -> 9 tiles, etc.)
+    "tiles_per_side": 1, # number of tiles per side when glueing together the tiles (e.g., 2 -> 4 tiles, 3 -> 9 tiles, etc.)
     "view_rotation_deg": 20, # rotation of the view (in degrees) ### randomization from 0 to 360
     "tile_size": 256, # size of the tiles (in pixels)
 }

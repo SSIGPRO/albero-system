@@ -27,9 +27,6 @@ def postprocessing(batch, coordinates, **kwargs):
     # Split the image into tiles and crop the coordinates
     newimage, newcoords = split_n_crop(newimage, newcoords, config.tile_size)
 
-    # Apply filter to smooth borders
-    newimage = gaussian_filter(torch.tensor(newimage, device=config.device, dtype=torch.float32), 7, 0.8).cpu().numpy()
-
     # Convert coordinates to tree counts
     treecount = coords_to_treecount(newcoords)
 

@@ -12,12 +12,13 @@ from generators import generate_probability_maps,\
                        project_shadow,\
                        compute_gradient_map,\
                        apply_lighting,\
-                       bool_tensor_to_coords
+                       bool_tensor_to_coords, \
+                       soft_rectangle_mask
 
 def generate_field(**kwargs):
     config = SimpleNamespace(**kwargs)
 
-    ############################### Background color + overlay
+    ############################### Background color
     if config.verbose:
         tic = time.perf_counter()
 
@@ -32,8 +33,13 @@ def generate_field(**kwargs):
                 return_value = random.choice(color_list)
         return return_value
     
+    def get_random_value(value_list):
+        return_value = value_list
+        if type(value_list) is list:
+            return_value = random.choice(value_list)
+        return return_value
+    
     color_bkg = get_random_color(config.color_bkg)
-    color_bkg_overlay = get_random_color(config.color_bkg_overlay)
     color_tree = get_random_color(config.color_tree)
     color_tree_shadow = get_random_color(config.color_tree_shadow)
     
@@ -49,23 +55,43 @@ def generate_field(**kwargs):
         torch.full(canvas_shape, color_bkg[3], device=config.device, dtype=torch.float32)
     ])
 
-    # apply overlay to background
-    # overlay_margin = 0
-    background_mask2 = torch.randn_like(field_channels[0])
-    # background_mask2[..., :, :overlay_margin] = 0
-    # background_mask2[..., :overlay_margin, :] = 0
-    # background_mask2[..., :, -overlay_margin:] = 0
-    # background_mask2[..., -overlay_margin:, :] = 0
-    background_mask2 = torch.sigmoid(gaussian_filter(background_mask2, config.bkg_overlay_filter_size*GAIN, config.bkg_overlay_filter_sigma*GAIN)*100-1)
-    for i in range(4):
-        field_channels[i] = field_channels[i]*(1-background_mask2) + color_bkg_overlay[i]*background_mask2
-
-    # free gpu memory
-    del background_mask2
-
     if config.verbose:
         toc = time.perf_counter()
         print(f"Background color generation time: {toc - tic:0.4f} seconds")
+
+    ############################### Apply patches and overlay to background
+
+    if config.verbose:
+        tic = time.perf_counter()
+
+    # Apply multiple passes of patches to the background
+    passes_number = random.randint(config.bkg_patches_passes_min, config.bkg_patches_passes_max)
+
+    for _ in range(passes_number):
+        picked_color = get_random_color(config.color_bkg_patches)
+        # Generate coordinates
+        patches_coords = torch.randint(0, max(CANVAS_SIZE), (config.batch_size, 4), device=config.device)
+        # Generate patch
+        patch_mask = soft_rectangle_mask(CANVAS_SIZE[0], CANVAS_SIZE[1], patches_coords, device=config.device)
+        # Apply patch to background
+        for i in range(4):
+            field_channels[i] = field_channels[i]*(1-patch_mask) + picked_color[i]*patch_mask
+
+        # Generate overlay mask
+        picked_color = get_random_color(config.color_bkg_overlay)
+        filter_size = get_random_value(config.bkg_overlay_filter_size)
+        filter_sigma = get_random_value(config.bkg_overlay_filter_sigma)
+        overlay_mask = torch.randn_like(field_channels[0])
+        overlay_mask = torch.sigmoid(gaussian_filter(overlay_mask, filter_size*GAIN, filter_sigma*GAIN)*5.0)*config.bkg_overlay_strength
+        # Apply overlay to background
+        for i in range(4):
+            field_channels[i] = field_channels[i]*(1-overlay_mask) + picked_color[i]*overlay_mask
+
+        del patch_mask, overlay_mask, patches_coords
+
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Background patches and overlay generation time: {toc - tic:0.4f} seconds")
 
     ############################### Apply stains to background
     # if config.verbose:
@@ -131,6 +157,7 @@ def generate_field(**kwargs):
                                          noise_level=config.treemap_noise_strength,
                                          sparse_remove_rate=config.treemap_sparse_remove_rate,
                                          sparse_add_rate=config.treemap_sparse_add_rate,
+                                         row_prune_rate=config.treemap_row_prune_rate,
                                          column_prune_rate=config.treemap_column_prune_rate,
                                          final_filter_size=config.treemap_final_filter_size,
                                          final_filter_sigma=config.treemap_final_filter_sigma,

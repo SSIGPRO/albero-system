@@ -10,6 +10,7 @@ def generate_probability_maps(prob_map_size,
                               noise_level=0.01,
                               sparse_remove_rate=0.05,
                               sparse_add_rate=0.05,
+                              row_prune_rate=0.01,
                               column_prune_rate=0.01,
                               final_filter_size=21,
                               final_filter_sigma=0.5,
@@ -26,6 +27,13 @@ def generate_probability_maps(prob_map_size,
         sparse_map = torch.rand((prob_map.shape[0], prob_map.shape[-2]), device=device)
         remove_mask = sparse_map < column_prune_rate
         prob_map[remove_mask] = torch.min(prob_map)
+
+        # randomly prune rows
+        sparse_map = torch.rand((prob_map.shape[0], prob_map.shape[-1]), device=device)
+        remove_mask = sparse_map < row_prune_rate
+        prob_map = prob_map.permute(0, 2, 1)  # transpose to prune rows
+        prob_map[remove_mask] = torch.min(prob_map)
+        prob_map = prob_map.permute(0, 2, 1)  # transpose back to original shape
 
         # randomly prune/add sparse values
         sparse_map = torch.rand_like(prob_map)
@@ -247,3 +255,44 @@ def bool_tensor_to_coords(bool_tensor, offsets, constant_offset, sizes, dx, dy) 
         coords_list.append(coords)
 
     return coords_list
+
+def soft_rectangle_mask(H, W, coords, sharpness=0.2, device="cpu"):
+    """
+    Generate N soft masks of shape (H, W), where each mask contains a soft-edged rectangle.
+
+    Args:
+        H, W: spatial dimensions of the canvas
+        coords: tensor of shape (N, 4) with (x1, y1, x2, y2) per rectangle
+        sharpness: how steep the sigmoid edge is
+
+    Returns:
+        mask: (N, H, W) soft rectangle masks
+    """
+    coords = coords.to(device)
+    N = coords.shape[0]
+
+    x1, y1, x2, y2 = coords[:, 0], coords[:, 1], coords[:, 2], coords[:, 3]
+    x_min = torch.min(x1, x2).to(device)
+    x_max = torch.max(x1, x2).to(device)
+    y_min = torch.min(y1, y2).to(device)
+    y_max = torch.max(y1, y2).to(device)
+
+    # Coordinate grids
+    ys = torch.linspace(0, H - 1, H, device=device).view(1, H, 1)  # (1, H, 1)
+    xs = torch.linspace(0, W - 1, W, device=device).view(1, 1, W)  # (1, 1, W)
+
+    # Reshape bounds for broadcasting
+    x_min = x_min.view(N, 1, 1)
+    x_max = x_max.view(N, 1, 1)
+    y_min = y_min.view(N, 1, 1)
+    y_max = y_max.view(N, 1, 1)
+
+    # Compute sigmoid transitions (shape: N × H × W)
+    left   = torch.sigmoid(sharpness * (xs - x_min))   # (N, H, W)
+    right  = torch.sigmoid(sharpness * (x_max - xs))   # (N, H, W)
+    top    = torch.sigmoid(sharpness * (ys - y_min))   # (N, H, W)
+    bottom = torch.sigmoid(sharpness * (y_max - ys))   # (N, H, W)
+
+    mask = left * right * top * bottom  # (N, H, W)
+
+    return mask
