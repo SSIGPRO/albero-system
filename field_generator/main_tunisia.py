@@ -26,7 +26,7 @@ DEFAULT_CONFIG = {
     "treemap_final_filter_size": 21, # size of the final filter
     "treemap_final_filter_sigma": 0.5, # sigma of the final filter
     ### TREE SPRITE SIZE AND POSITIONING:
-    "tree_threshold": 0.4, # threshold for tree existence (1 -> no trees, 0 -> all trees) ### randomization from 0 to 1
+    "tree_threshold": 0.2, # threshold for tree existence (1 -> no trees, 0 -> all trees) ### randomization from 0 to 1
     "tree_sprite_size": 20, # size of each tree sprite in pixels
     "tree_center_jitter": 1, # jitter of the tree center (in pixels) ### maybe slight randomization (integer positive numbers)
     "tree_offset": -10, # offset (x and y of the same value) of the first top left tree (in pixels) ### maybe slight randomization (integer positive numbers)
@@ -54,6 +54,10 @@ DEFAULT_CONFIG = {
     "bkg_noise_strength": 0.1, # strength of the noise added to the background
     "bkg_patches_passes_min": 8, # minimum number of passes for the background patches
     "bkg_patches_passes_max": 16, # maximum number of passes for the background patches
+    "bkg_patches_max_sizes": [(100, 300), (300, 100)], # maximum (width, height) of the background patches (in pixels) - random pick one from the list
+    "bkg_patches_notrees_passes_min": 2, # minimum number of passes for the background patches (without overlapping trees)
+    "bkg_patches_notrees_passes_max": 6, # maximum number of passes for the background patches (without overlapping trees)
+    "bkg_patches_notrees_max_sizes": [(50, 300), (300, 50)], # maximum (width, height) of the background patches (in pixels) (without overlapping trees) - random pick one from the list
     ### SHADOWS AND LIGHTING:
     "shadow_direction": 1.0, # direction of the light source (in radians) ### randomization 0 to 2pi
     "shadow_length": 5, # length of the shadow (in pixels) ### randomization 0 to 20 (integer positive numbers)
@@ -67,10 +71,14 @@ DEFAULT_CONFIG = {
                           (400, 280, 320, 800),
                           (300, 200, 150, 400),
                           (500, 300, 200, 450)], # color of the background overlays (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
-    "color_bkg_patches": [(550, 430, 420, 700),
-                          (400, 280, 320, 800),
-                          (300, 200, 150, 400),
-                          (500, 300, 200, 450)], # color of the background patches (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
+    "color_bkg_patches": [(550, 430, 1000, 700),
+                          (400, 280, 1000, 800),
+                          (300, 200, 1000, 400),
+                          (500, 300, 1000, 450)], # color of the background patches (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
+    "color_bkg_patches_notrees": [(300, 1000, 350, 300),
+                                  (400, 1000, 320, 400),
+                                  (456, 1000, 222, 300),
+                                  (546, 1000, 300, 340)], # color of the background patches (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     "color_tree": (220, 280, 300, 1150), # color of the trees (R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     "color_tree_shadow": (80, 120, 130, 550), # color of the tree shadows(R, G, B, NIF) ### maybe slight randomization + verification with the actual images
     ### POSTPROCESSING:

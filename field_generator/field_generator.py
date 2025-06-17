@@ -6,6 +6,7 @@ import random
 from base import gaussian_filter, normalize_tensor, normalize_positive_tensor
 from types import SimpleNamespace
 from generators import generate_probability_maps,\
+                       generate_tree_offsets,\
                        generate_tree_sprites,\
                        prob_to_treesize,\
                        generate_field_mask,\
@@ -13,6 +14,8 @@ from generators import generate_probability_maps,\
                        compute_gradient_map,\
                        apply_lighting,\
                        bool_tensor_to_coords, \
+                       generate_rectangle_coords, \
+                       coords_map_to_list, \
                        soft_rectangle_mask
 
 def generate_field(**kwargs):
@@ -70,7 +73,12 @@ def generate_field(**kwargs):
     for _ in range(passes_number):
         picked_color = get_random_color(config.color_bkg_patches)
         # Generate coordinates
-        patches_coords = torch.randint(0, max(CANVAS_SIZE), (config.batch_size, 4), device=config.device)
+        max_sizes = random.choice(config.bkg_patches_max_sizes)
+        patches_coords = generate_rectangle_coords(batch_size=config.batch_size,
+                                                   canvas_size=CANVAS_SIZE,
+                                                   max_width=max_sizes[0]*GAIN,
+                                                   max_height=max_sizes[1]*GAIN,
+                                                   device=config.device,)
         # Generate patch
         patch_mask = soft_rectangle_mask(CANVAS_SIZE[0], CANVAS_SIZE[1], patches_coords, device=config.device)
         # Apply patch to background
@@ -92,58 +100,6 @@ def generate_field(**kwargs):
     if config.verbose:
         toc = time.perf_counter()
         print(f"Background patches and overlay generation time: {toc - tic:0.4f} seconds")
-
-    ############################### Apply stains to background
-    # if config.verbose:
-    #     tic = time.perf_counter()
-
-    # # Generate background stains map
-    # bkg_stain_map_shape = (config.batch_size, config.treemap_size[0], config.treemap_size[1]*3)
-    # bkg_stain_map = torch.rand(bkg_stain_map_shape, device=config.device)*(config.bkg_stain_strength-config.bkg_stain_strength_min)+config.bkg_stain_strength_min
-
-    # # Generate background stains sprites
-    # bkg_stain_sprites, _, _ = generate_tree_sprites(bkg_stain_map*5,
-    #                                                 tree_sprite_size=config.bkg_stain_pixel_size,
-    #                                                 max_tree_size=10,
-    #                                                 center_jitter=[config.bkg_stain_center_jitter]*2)
-
-    # # Free gpu memory
-    # del bkg_stain_map
-
-    # # Generate field background stains mask
-    # background_mask = generate_field_mask(bkg_stain_sprites,
-    #                                       CANVAS_SIZE,
-    #                                       distance=(config.tree_xspace*GAIN//3, config.tree_yspace*GAIN),
-    #                                       offset=config.bkg_stain_offset*GAIN)
-
-    # # Free gpu memory
-    # del bkg_stain_sprites
-
-    # # apply stains to background
-    # for i in range(4):
-    #     field_channels[i] = field_channels[i]*(1-background_mask) + color_bkg_stain[i]*background_mask
-
-    # # free gpu memory
-    # del background_mask
-
-    # if config.verbose:
-    #     toc = time.perf_counter()
-    #     print(f"Background stains generation time: {toc - tic:0.4f} seconds")
-
-    ############################### Apply noise to background
-    if config.verbose:
-        tic = time.perf_counter()
-
-    # apply noise to bkg
-    noise = torch.randn_like(field_channels[0])*config.bkg_noise_strength
-    field_channels *= (1+noise)
-
-    # free gpu memory
-    del noise
-
-    if config.verbose:
-        toc = time.perf_counter()
-        print(f"Background noise generation time: {toc - tic:0.4f} seconds")
 
     ############################### Generate field of trees
     if config.verbose:
@@ -172,6 +128,12 @@ def generate_field(**kwargs):
                                                               steepness=config.tree_steepness,
                                                               distribution_shift=config.tree_distribution_shift)
     
+    # Generate tree offsets and absolute positions
+    tree_offsets = generate_tree_offsets(treesize_map=treesize_map,
+                                         center_jitter=(config.tree_center_jitter*GAIN, config.tree_center_jitter*GAIN),
+                                         alternate_offset=config.tree_alternate_offset*GAIN)
+
+    
     # Free gpu memory
     del prob_map
 
@@ -179,19 +141,98 @@ def generate_field(**kwargs):
         toc = time.perf_counter()
         print(f"Field of trees probability map generation time: {toc - tic:0.4f} seconds")
 
+    ############################### Generate coordinates and sizes
+    if config.verbose:
+        tic = time.perf_counter()
+
+    # Convert treebool_map to coordinate labels
+    constant_offset = [config.tree_offset*GAIN + config.tree_sprite_size*GAIN]*2
+    tree_coords_map = bool_tensor_to_coords(tree_boolmap,
+                                            tree_offsets,
+                                            constant_offset,
+                                            config.tree_xspace*GAIN,
+                                            config.tree_yspace*GAIN,)
+    
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Field of trees coordinates generation time: {toc - tic:0.4f} seconds")
+
+    ############################### Generate patches without overlapping trees
+
+    if config.verbose:
+        tic = time.perf_counter()
+
+    # Apply multiple passes of patches to the background
+    passes_number = random.randint(config.bkg_patches_notrees_passes_min, config.bkg_patches_notrees_passes_max)
+
+    for _ in range(passes_number):
+        picked_color = get_random_color(config.color_bkg_patches_notrees)
+        # Generate coordinates
+        max_size = random.choice(config.bkg_patches_notrees_max_sizes)
+        patches_coords = generate_rectangle_coords(batch_size=config.batch_size,
+                                                   canvas_size=CANVAS_SIZE,
+                                                   max_width=max_size[0]*GAIN,
+                                                   max_height=max_size[1]*GAIN,
+                                                   device=config.device,)
+        # Generate patch
+        patch_mask = soft_rectangle_mask(CANVAS_SIZE[0], CANVAS_SIZE[1], patches_coords, device=config.device)
+        # Apply patch to background
+        for i in range(4):
+            field_channels[i] = field_channels[i]*(1-patch_mask) + picked_color[i]*patch_mask
+
+        # Remove trees overlapping with the patch
+        for i in range(len(tree_coords_map)):
+            # Remove the trees that overlap with the patch
+            selector = (tree_coords_map[i][0] >= patches_coords[i][0]) & \
+                       (tree_coords_map[i][1] >= patches_coords[i][1]) & \
+                       (tree_coords_map[i][0] < patches_coords[i][2]) & \
+                       (tree_coords_map[i][1] < patches_coords[i][3])
+            treesize_map[i][selector] = 0.0
+            tree_boolmap[i][selector] = False
+
+        del patch_mask, patches_coords
+
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Background patches and overlay generation time (without overlapping trees): {toc - tic:0.4f} seconds")
+
+    ############################### Generate tree coordinates list
+    if config.verbose:
+        tic = time.perf_counter()
+    # Generate tree coordinates list
+    tree_coordinates = coords_map_to_list(tree_coords_map,
+                                          tree_boolmap,
+                                          treesize_map*2)
+
+    ############################### Apply noise to background
+    if config.verbose:
+        tic = time.perf_counter()
+
+    # apply noise to bkg
+    noise = torch.randn_like(field_channels[0])*config.bkg_noise_strength
+    field_channels *= (1+noise)
+
+    # free gpu memory
+    del noise
+
+    if config.verbose:
+        toc = time.perf_counter()
+        print(f"Background noise generation time: {toc - tic:0.4f} seconds")
+
+    ############################### Generate tree sprites
+
     if config.verbose:
         tic = time.perf_counter()
 
     # Generate tree sprites
-    tree_sprites, tree_offsets, tree_sizes = generate_tree_sprites(treesize_map=treesize_map,
-                                                                   max_tree_size=config.treeshape_max_size*GAIN,
-                                                                   tree_sprite_size=config.tree_sprite_size*GAIN,
-                                                                   center_jitter=(config.tree_center_jitter*GAIN, config.tree_center_jitter*GAIN),
-                                                                   alternate_offset=config.tree_alternate_offset*GAIN,
-                                                                   noise_level=config.treeshape_size*GAIN,
-                                                                   filter_size=config.treeshape_filter_size*GAIN,
-                                                                   filter_sigma=config.treeshape_filter_sigma*GAIN,)
-    
+    tree_sprites = generate_tree_sprites(treesize_map=treesize_map,
+                                         max_tree_size=config.treeshape_max_size*GAIN,
+                                         tree_sprite_size=config.tree_sprite_size*GAIN,
+                                         tree_offsets=tree_offsets,
+                                         noise_level=config.treeshape_size*GAIN,
+                                         filter_size=config.treeshape_filter_size*GAIN,
+                                         filter_sigma=config.treeshape_filter_sigma*GAIN,)
+
     # Free gpu memory
     del treesize_map
 
@@ -207,23 +248,6 @@ def generate_field(**kwargs):
     if config.verbose:
         toc = time.perf_counter()
         print(f"Field of trees generation time: {toc - tic:0.4f} seconds")
-
-    ############################### Generate coordinates and sizes
-    if config.verbose:
-        tic = time.perf_counter()
-
-    # Convert treebool_map to coordinate labels
-    constant_offset = [config.tree_offset*GAIN + config.tree_sprite_size*GAIN]*2
-    tree_coordinates = bool_tensor_to_coords(tree_boolmap,
-                                             tree_offsets,
-                                             constant_offset,
-                                             tree_sizes,
-                                             config.tree_xspace*GAIN,
-                                             config.tree_yspace*GAIN,)
-    
-    if config.verbose:
-        toc = time.perf_counter()
-        print(f"Field of trees coordinates generation time: {toc - tic:0.4f} seconds")
 
     ############################### Generate and apply projected shadows
     if config.shadow_length > 0:

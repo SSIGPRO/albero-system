@@ -62,12 +62,29 @@ def prob_to_treesize(prob_map, threshold, treeshape_min_size, treeshape_size, tr
     treesize_map = treesize_map*tree_boolmap.to(torch.float32)
     return treesize_map, tree_boolmap, tree_count
 
+def generate_tree_offsets(treesize_map,
+                          center_jitter=(0, 0),
+                          alternate_offset=0):
+    device = treesize_map.device
+    # Generate random offsets
+    if(center_jitter[0] == 0 and center_jitter[1] == 0):
+        # No jitter
+        tree_offsets = torch.stack((torch.zeros_like(treesize_map, device=device),
+                                    torch.zeros_like(treesize_map, device=device)), dim=1)
+    else:
+        tree_offsets = torch.stack((torch.randint_like(treesize_map, low=-center_jitter[0], high=center_jitter[0]),
+                                    torch.randint_like(treesize_map, low=-center_jitter[1], high=center_jitter[1])), dim=1)
+    # Add alternate offset to odd rows
+    if alternate_offset > 0:
+        tree_offsets[:, 0, 1::2] += alternate_offset
+
+    return tree_offsets
+
 # Draws a filled noisy circle on a tensor using vectorized operations.
 def generate_tree_sprites(treesize_map,
                           tree_sprite_size,
                           max_tree_size,
-                          center_jitter=(0, 0),
-                          alternate_offset=0,
+                          tree_offsets,
                           noise_level=3.0,
                           filter_size=5,
                           filter_sigma=2.0):
@@ -75,19 +92,7 @@ def generate_tree_sprites(treesize_map,
     batch_size = treesize_map.shape[0]
     map_N, map_M = treesize_map.shape[1], treesize_map.shape[2]
     # Sprite size
-    N = tree_sprite_size*2
-    # Generate random offsets
-    if(center_jitter[0] == 0 and center_jitter[1] == 0):
-        # No jitter
-        tree_offsets = torch.stack((torch.zeros_like(treesize_map, device=device),
-                                    torch.zeros_like(treesize_map, device=device)))
-    else:
-        tree_offsets = torch.stack((torch.randint_like(treesize_map, low=-center_jitter[0], high=center_jitter[0]),
-                                    torch.randint_like(treesize_map, low=-center_jitter[1], high=center_jitter[1])))
-        
-    # Add alternate offset to odd rows
-    if alternate_offset > 0:
-        tree_offsets[0, :, 1::2] += alternate_offset
+    N = tree_sprite_size*2    
 
     # Center of the circle
     center = (N//2, N//2)
@@ -96,6 +101,8 @@ def generate_tree_sprites(treesize_map,
     # Compute distances from the center+offset for all pixels
     x_coords = x_coords.unsqueeze(0).unsqueeze(0).expand(batch_size, map_N, map_M, -1, -1)
     y_coords = y_coords.unsqueeze(0).unsqueeze(0).expand(batch_size, map_N, map_M, -1, -1)
+    
+    tree_offsets = tree_offsets.permute(1, 0, 2, 3) # permute to (2, batch_size, N, N)
     x_offsets = tree_offsets[0].unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)
     y_offsets = tree_offsets[1].unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)
     dist = torch.sqrt((x_coords - center[0] - x_offsets) ** 2 + (y_coords - center[1] - y_offsets) ** 2)
@@ -113,9 +120,7 @@ def generate_tree_sprites(treesize_map,
     # Fill in the circle (set to color where distance <= noisy radius)
     tree_sprites = (dist <= noisy_radius)*torch.sqrt(torch.clamp(noisy_radius**2-dist**2, 0, None)/(torch.max(noisy_radius)**2)) # circle-like shading
     
-    tree_offsets = tree_offsets.permute(1, 0, 2, 3) # permute to (batch_size, 2, N, N)
-    sizes = radius*2
-    return tree_sprites, tree_offsets, sizes
+    return tree_sprites
 
 def _compose_stack(sprites, portion_num, overlap=(0, 0)):
     batch_size = sprites.shape[0]
@@ -239,22 +244,43 @@ def apply_lighting(field, field_gradient, strength, filter_size=7, filter_sigma=
 
     return field
 
-def bool_tensor_to_coords(bool_tensor, offsets, constant_offset, sizes, dx, dy) -> torch.Tensor:
+def bool_tensor_to_coords(bool_tensor, offsets, constant_offset, dx, dy) -> torch.Tensor:
+    device = bool_tensor.device
+    _, H, W = bool_tensor.shape
+    y_coords = torch.arange(H, device=device).view(H, 1).expand(H, W)*dy+offsets[:, 1]+constant_offset[1]
+    x_coords = torch.arange(W, device=device).view(1, W).expand(H, W)*dx+offsets[:, 0]+constant_offset[0]
+    coords_map = torch.stack((x_coords, y_coords), dim=1)  # (B, H, W, 2)
+
+    return coords_map
+
+def coords_map_to_list(coords_map, bool_tensor, sizes):
     B = bool_tensor.shape[0]
     coords_list = []
-
     for b in range(B):
-        indices = torch.nonzero(bool_tensor[b], as_tuple=False)  # (N_i, 2) -> (row_idx, col_idx)
-        if indices.numel() == 0:
-            coords_list.append(torch.empty((0, 2)))
-            continue
-        y = indices[:, 0].float() * dy + constant_offset[1] + offsets[b][1, bool_tensor[b]].flatten()
-        x = indices[:, 1].float() * dx + constant_offset[0] + offsets[b][0, bool_tensor[b]].flatten()
+        y = coords_map[b, 1][bool_tensor[b]].flatten()
+        x = coords_map[b, 0][bool_tensor[b]].flatten()
         s = sizes[b][bool_tensor[b]].flatten()
-        coords = torch.stack((x, y, s), dim=1)  # (N_i, 2)
+        coords = torch.stack((x, y, s), dim=1)  # (N, 3)
         coords_list.append(coords)
-
     return coords_list
+
+def generate_rectangle_coords(batch_size, max_width, max_height, canvas_size, device="cpu"):
+    # Sample top-left corner coordinates
+    xleft = torch.randint(0, canvas_size[0] - max_width, (batch_size,), device=device)
+    ytop = torch.randint(0, canvas_size[1] - max_height, (batch_size,), device=device)
+
+    # Sample widths and heights that satisfy the max constraints
+    widths = torch.randint(1, max_width + 1, (batch_size,), device=device)
+    heights = torch.randint(1, max_height + 1, (batch_size,), device=device)
+
+    # Compute bottom-right coordinates
+    xright = xleft + widths
+    ybottom = ytop + heights
+
+    # Stack to get final (batch_size, 4) tensor: (xleft, ytop, xright, ybottom)
+    patches_coords = torch.stack([xleft, ytop, xright, ybottom], dim=1)
+
+    return patches_coords
 
 def soft_rectangle_mask(H, W, coords, sharpness=0.2, device="cpu"):
     """
