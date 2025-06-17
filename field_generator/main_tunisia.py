@@ -26,7 +26,7 @@ DEFAULT_CONFIG = {
     "treemap_final_filter_size": 21, # size of the final filter
     "treemap_final_filter_sigma": 0.5, # sigma of the final filter
     ### TREE SPRITE SIZE AND POSITIONING:
-    "tree_threshold": 0.2, # threshold for tree existence (1 -> no trees, 0 -> all trees) ### randomization from 0 to 1
+    "tree_threshold": 0.6, # threshold for tree existence (1 -> no trees, 0 -> all trees) ### randomization from 0 to 1
     "tree_sprite_size": 20, # size of each tree sprite in pixels
     "tree_center_jitter": 1, # jitter of the tree center (in pixels) ### maybe slight randomization (integer positive numbers)
     "tree_offset": -10, # offset (x and y of the same value) of the first top left tree (in pixels) ### maybe slight randomization (integer positive numbers)

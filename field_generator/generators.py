@@ -56,11 +56,10 @@ def generate_probability_maps(prob_map_size,
 
 def prob_to_treesize(prob_map, threshold, treeshape_min_size, treeshape_size, treeshape_max_size, steepness=1.0, distribution_shift=0.0):
     tree_boolmap = prob_map > threshold
-    tree_count = torch.sum(tree_boolmap.view(tree_boolmap.shape[0], -1), axis=-1)
     treesize_map = torch.nn.functional.sigmoid((prob_map-threshold)/(1-threshold)*steepness+distribution_shift)*treeshape_size
     treesize_map = torch.clamp(treesize_map, treeshape_min_size, treeshape_max_size)
     treesize_map = treesize_map*tree_boolmap.to(torch.float32)
-    return treesize_map, tree_boolmap, tree_count
+    return treesize_map, tree_boolmap
 
 def generate_tree_offsets(treesize_map,
                           center_jitter=(0, 0),

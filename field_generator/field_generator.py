@@ -120,13 +120,13 @@ def generate_field(**kwargs):
                                          device=config.device)
     
     # Generate tree size map and number of trees labels
-    treesize_map, tree_boolmap, tree_count = prob_to_treesize(prob_map, 
-                                                              threshold=config.tree_threshold,
-                                                              treeshape_min_size=config.treeshape_min_size*GAIN,
-                                                              treeshape_size=config.treeshape_size*GAIN,
-                                                              treeshape_max_size=config.treeshape_max_size*GAIN,
-                                                              steepness=config.tree_steepness,
-                                                              distribution_shift=config.tree_distribution_shift)
+    treesize_map, tree_boolmap = prob_to_treesize(prob_map, 
+                                                  threshold=config.tree_threshold,
+                                                  treeshape_min_size=config.treeshape_min_size*GAIN,
+                                                  treeshape_size=config.treeshape_size*GAIN,
+                                                  treeshape_max_size=config.treeshape_max_size*GAIN,
+                                                  steepness=config.tree_steepness,
+                                                  distribution_shift=config.tree_distribution_shift)
     
     # Generate tree offsets and absolute positions
     tree_offsets = generate_tree_offsets(treesize_map=treesize_map,
@@ -324,6 +324,9 @@ def generate_field(**kwargs):
 
     # Convert to 16 bit numpy channels
     output = (output.round()).cpu().numpy().astype(np.uint16)
+
+    # Count trees in the field
+    tree_count = torch.sum(tree_boolmap.view(tree_boolmap.shape[0], -1), axis=-1)
     tree_count = tree_count.cpu().numpy().astype(np.uint16)
 
     # Adjust coordinates to match the output size and convert to numpy
