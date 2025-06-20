@@ -27,24 +27,21 @@ def generate_field(**kwargs):
 
     GAIN = config.field_generation_zoom
     CANVAS_SIZE = config.field_size[0]*GAIN, config.field_size[1]*GAIN
-
-    # select color from list
-    def get_random_color(color_list):
-        return_value = color_list
-        if type(color_list) is list:
-            if type(color_list[0]) is tuple or type(color_list[0]) is list:
-                return_value = random.choice(color_list)
-        return return_value
-    
+ 
     def get_random_value(value_list):
         return_value = value_list
         if type(value_list) is list:
             return_value = random.choice(value_list)
         return return_value
     
-    color_bkg = get_random_color(config.color_bkg)
-    color_tree = get_random_color(config.color_tree)
-    color_tree_shadow = get_random_color(config.color_tree_shadow)
+    # Pick color set
+    color_set = random.choice(config.color_sets)
+    color_bkg = [c*(1+random.uniform(-config.color_randomization_strength, config.color_randomization_strength)) for c in color_set[0]]
+    color_bkg_overlay = [c*(1+random.uniform(-config.color_randomization_strength, config.color_randomization_strength)) for c in color_set[1]]
+    color_bkg_patches = [c*(1+random.uniform(-config.color_randomization_strength, config.color_randomization_strength)) for c in color_set[2]]
+    color_bkg_patches_notrees = [c*(1+random.uniform(-config.color_randomization_strength, config.color_randomization_strength)) for c in color_set[3]]
+    color_tree = [c*(1+random.uniform(-config.color_randomization_strength, config.color_randomization_strength)) for c in color_set[4]]
+    color_tree_shadow = [c*(1+random.uniform(-config.color_randomization_strength, config.color_randomization_strength)) for c in color_set[5]]
     
     # generate background color
     canvas_shape = (config.batch_size,
@@ -71,29 +68,28 @@ def generate_field(**kwargs):
     passes_number = random.randint(config.bkg_patches_passes_min, config.bkg_patches_passes_max)
 
     for _ in range(passes_number):
-        picked_color = get_random_color(config.color_bkg_patches)
         # Generate coordinates
-        max_sizes = random.choice(config.bkg_patches_max_sizes)
+        minmax_sizes = random.choice(config.bkg_patches_minmax_sizes)
         patches_coords = generate_rectangle_coords(batch_size=config.batch_size,
                                                    canvas_size=CANVAS_SIZE,
-                                                   max_width=max_sizes[0]*GAIN,
-                                                   max_height=max_sizes[1]*GAIN,
+                                                   minmax_width=minmax_sizes[0:2]*GAIN,
+                                                   minmax_height=minmax_sizes[2:4]*GAIN,
                                                    device=config.device,)
         # Generate patch
-        patch_mask = soft_rectangle_mask(CANVAS_SIZE[0], CANVAS_SIZE[1], patches_coords, device=config.device)
+        patch_mask = soft_rectangle_mask(CANVAS_SIZE[0], CANVAS_SIZE[1], patches_coords, sharpness=config.bkg_patches_steepness, device=config.device)
         # Apply patch to background
         for i in range(4):
-            field_channels[i] = field_channels[i]*(1-patch_mask) + picked_color[i]*patch_mask
+            field_channels[i] = field_channels[i]*(1-patch_mask) + color_bkg_patches[i]*patch_mask
 
         # Generate overlay mask
-        picked_color = get_random_color(config.color_bkg_overlay)
+        picked_color = color_bkg_overlay
         filter_size = get_random_value(config.bkg_overlay_filter_size)
         filter_sigma = get_random_value(config.bkg_overlay_filter_sigma)
         overlay_mask = torch.randn_like(field_channels[0])
-        overlay_mask = torch.sigmoid(gaussian_filter(overlay_mask, filter_size*GAIN, filter_sigma*GAIN)*5.0)*config.bkg_overlay_strength
+        overlay_mask = torch.sigmoid(normalize_tensor(gaussian_filter(overlay_mask, filter_size*GAIN, filter_sigma*GAIN))*config.bkg_overlay_steepness)*random.uniform(0.0, 1.0)*patch_mask
         # Apply overlay to background
         for i in range(4):
-            field_channels[i] = field_channels[i]*(1-overlay_mask) + picked_color[i]*overlay_mask
+            field_channels[i] = field_channels[i]*(1-overlay_mask) + color_bkg_overlay[i]*overlay_mask
 
         del patch_mask, overlay_mask, patches_coords
 
@@ -122,9 +118,9 @@ def generate_field(**kwargs):
     # Generate tree size map and number of trees labels
     treesize_map, tree_boolmap = prob_to_treesize(prob_map, 
                                                   threshold=config.tree_threshold,
-                                                  treeshape_min_size=config.treeshape_min_size*GAIN,
-                                                  treeshape_size=config.treeshape_size*GAIN,
-                                                  treeshape_max_size=config.treeshape_max_size*GAIN,
+                                                  treeshape_min_size=config.treeshape_min_radius*GAIN,
+                                                  treeshape_size=config.treeshape_radius*GAIN,
+                                                  treeshape_max_size=config.treeshape_max_radius*GAIN,
                                                   steepness=config.tree_steepness,
                                                   distribution_shift=config.tree_distribution_shift)
     
@@ -165,17 +161,17 @@ def generate_field(**kwargs):
     # Apply multiple passes of patches to the background
     passes_number = random.randint(config.bkg_patches_notrees_passes_min, config.bkg_patches_notrees_passes_max)
 
+    picked_color = color_bkg_patches_notrees
     for _ in range(passes_number):
-        picked_color = get_random_color(config.color_bkg_patches_notrees)
         # Generate coordinates
-        max_size = random.choice(config.bkg_patches_notrees_max_sizes)
+        minmax_size = random.choice(config.bkg_patches_notrees_minmax_sizes)
         patches_coords = generate_rectangle_coords(batch_size=config.batch_size,
                                                    canvas_size=CANVAS_SIZE,
-                                                   max_width=max_size[0]*GAIN,
-                                                   max_height=max_size[1]*GAIN,
+                                                   minmax_width=minmax_size[0:2]*GAIN,
+                                                   minmax_height=minmax_size[2:4]*GAIN,
                                                    device=config.device,)
         # Generate patch
-        patch_mask = soft_rectangle_mask(CANVAS_SIZE[0], CANVAS_SIZE[1], patches_coords, device=config.device)
+        patch_mask = soft_rectangle_mask(CANVAS_SIZE[0], CANVAS_SIZE[1], patches_coords, sharpness=config.bkg_patches_steepness, device=config.device)
         # Apply patch to background
         for i in range(4):
             field_channels[i] = field_channels[i]*(1-patch_mask) + picked_color[i]*patch_mask
@@ -226,10 +222,10 @@ def generate_field(**kwargs):
 
     # Generate tree sprites
     tree_sprites = generate_tree_sprites(treesize_map=treesize_map,
-                                         max_tree_size=config.treeshape_max_size*GAIN,
+                                         max_tree_size=config.treeshape_max_radius*GAIN,
                                          tree_sprite_size=config.tree_sprite_size*GAIN,
                                          tree_offsets=tree_offsets,
-                                         noise_level=config.treeshape_size*GAIN,
+                                         noise_level=config.treeshape_noise,
                                          filter_size=config.treeshape_filter_size*GAIN,
                                          filter_sigma=config.treeshape_filter_sigma*GAIN,)
 

@@ -263,14 +263,14 @@ def coords_map_to_list(coords_map, bool_tensor, sizes):
         coords_list.append(coords)
     return coords_list
 
-def generate_rectangle_coords(batch_size, max_width, max_height, canvas_size, device="cpu"):
+def generate_rectangle_coords(batch_size, minmax_width, minmax_height, canvas_size, device="cpu"):
     # Sample top-left corner coordinates
-    xleft = torch.randint(0, canvas_size[0] - max_width, (batch_size,), device=device)
-    ytop = torch.randint(0, canvas_size[1] - max_height, (batch_size,), device=device)
+    xleft = torch.randint(0, canvas_size[0] - minmax_width[1], (batch_size,), device=device)
+    ytop = torch.randint(0, canvas_size[1] - minmax_height[1], (batch_size,), device=device)
 
     # Sample widths and heights that satisfy the max constraints
-    widths = torch.randint(1, max_width + 1, (batch_size,), device=device)
-    heights = torch.randint(1, max_height + 1, (batch_size,), device=device)
+    widths = torch.randint(1 + minmax_width[0], minmax_width[1] + 1, (batch_size,), device=device)
+    heights = torch.randint(1 + minmax_height[0], minmax_height[1] + 1, (batch_size,), device=device)
 
     # Compute bottom-right coordinates
     xright = xleft + widths
