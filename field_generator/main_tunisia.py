@@ -26,26 +26,25 @@ DEFAULT_CONFIG = {
     "treemap_final_filter_size": 21, # size of the final filter
     "treemap_final_filter_sigma": 0.5, # sigma of the final filter
     ### TREE SPRITE SIZE AND POSITIONING:
-    "tree_threshold": 0.6, # threshold for tree existence (1 -> no trees, 0 -> all trees) ### randomization from 0.4 to 0.6
+    "tree_threshold": 0.3, # threshold for tree existence (1 -> no trees, 0 -> all trees) ### randomization from 0.3 to 0.6
     "tree_sprite_size": 80, # size of each tree sprite in pixels
     "tree_center_jitter": 5, # jitter of the tree center (in pixels)
     "tree_offset": -10, # offset (x and y of the same value) of the first top left tree (in pixels)
     "tree_alternate_offset": 20, # offset applied only to odd rows ### slight randomization
-    "tree_xspace": 50, # x space between trees (in float pixels) from center to center ### slight randomization
-    "tree_yspace": 50, # y space between trees (in float pixels) ### slight randomization
+    "tree_xspace": 71, # x space between trees (in float pixels) from center to center ### slight randomization
+    "tree_yspace": 71, # y space between trees (in float pixels) ### slight randomization
     "tree_steepness": 2.0, # steepness of the variation of tree size with respect to the probability map
     "tree_distribution_shift": 0.0, # shift of the variation of tree size with respect to the probability map
     ### TREE SHAPE:
-    "treeshape_radius": 12, # average tree radius in pixels
-    "treeshape_min_radius": 6, # minimum tree radius
-    "treeshape_max_radius": 14, # maximum tree radius
+    "treeshape_min_radius": 10, # minimum tree radius in pixels ### randomization 7 to 10
+    "treeshape_max_radius": 14, # maximum tree radius ### randomization 12 to 14
     "treeshape_noise": 10, # noisyness of the tree shape (maximum amount in pixels)
     "treeshape_filter_size": 15, # size of the filter to smooth the tree shape
-    "treeshape_filter_sigma": 1.5, # sigma of the filter to smooth the tree shape
+    "treeshape_filter_sigma": 1.0, # sigma of the filter to smooth the tree shape
     ### BACKGROUND:
-    "bkg_overlay_filter_size": 50, # size of the filter to smooth the background overlay
+    "bkg_overlay_filter_size": 25, # size of the filter to smooth the background overlay
     "bkg_overlay_filter_sigma": [5.0,], # sigma of the filter to smooth the background overlay
-    "bkg_overlay_steepness": 15.0, # steepness of the stains produced as background overlay
+    "bkg_overlay_steepness": 20.0, # steepness of the stains produced as background overlay
     "bkg_noise_strength": 0.05, # strength of the noise added to the background
     "bkg_patches_steepness": 0.5, # steepness of the patches produced as background
     "bkg_patches_passes_min": 0, # minimum number of passes for the background patches

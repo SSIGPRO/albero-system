@@ -85,7 +85,7 @@ def generate_field(**kwargs):
         picked_color = color_bkg_overlay
         filter_size = get_random_value(config.bkg_overlay_filter_size)
         filter_sigma = get_random_value(config.bkg_overlay_filter_sigma)
-        overlay_mask = torch.randn_like(field_channels[0])
+        overlay_mask = torch.tanh(torch.randn_like(field_channels[0]))
         overlay_mask = torch.sigmoid(normalize_tensor(gaussian_filter(overlay_mask, filter_size*GAIN, filter_sigma*GAIN))*config.bkg_overlay_steepness)*random.uniform(0.0, 1.0)*patch_mask
         # Apply overlay to background
         for i in range(4):
@@ -119,7 +119,6 @@ def generate_field(**kwargs):
     treesize_map, tree_boolmap = prob_to_treesize(prob_map, 
                                                   threshold=config.tree_threshold,
                                                   treeshape_min_size=config.treeshape_min_radius*GAIN,
-                                                  treeshape_size=config.treeshape_radius*GAIN,
                                                   treeshape_max_size=config.treeshape_max_radius*GAIN,
                                                   steepness=config.tree_steepness,
                                                   distribution_shift=config.tree_distribution_shift)

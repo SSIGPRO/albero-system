@@ -54,9 +54,11 @@ def generate_probability_maps(prob_map_size,
 
         return prob_map
 
-def prob_to_treesize(prob_map, threshold, treeshape_min_size, treeshape_size, treeshape_max_size, steepness=1.0, distribution_shift=0.0):
+def prob_to_treesize(prob_map, threshold, treeshape_min_size, treeshape_max_size, steepness=1.0, distribution_shift=0.0):
     tree_boolmap = prob_map > threshold
-    treesize_map = torch.nn.functional.sigmoid((prob_map-threshold)/(1-threshold)*steepness+distribution_shift)*treeshape_size
+    treesize_map = torch.nn.functional.sigmoid((prob_map-threshold)/(1-threshold)*steepness+distribution_shift)
+    treesize_map = treesize_map * (treeshape_max_size - treeshape_min_size) + treeshape_min_size
+    treesize_map = treesize_map * (1  + random.uniform(-0.1, 0.1))  # add some random shift to the tree size
     treesize_map = torch.clamp(treesize_map, treeshape_min_size, treeshape_max_size)
     treesize_map = treesize_map*tree_boolmap.to(torch.float32)
     return treesize_map, tree_boolmap
@@ -112,7 +114,7 @@ def generate_tree_sprites(treesize_map,
     noise = (torch.rand(*treesize_map.shape, N, N, device=device) - 0.5) * 2 * noise_level # uniform noise between -noise_level and +noise_level
     noise = gaussian_filter(noise.view(-1, noise.shape[3], noise.shape[3]), filter_size, filter_sigma).view(*noise.shape)
     radius = treesize_map
-    noisy_radius = torch.clamp(radius.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)+noise, 0, max_tree_size)
+    noisy_radius = torch.clamp(radius.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)+noise, 0, max_tree_size*1.2)
 
     del noise
     
