@@ -4,3 +4,5 @@ main_italy2.py
 main_nadec.py
 __pycache__/
 outputs/
+generated_dataset1
+generated_dataset2
