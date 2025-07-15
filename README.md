@@ -31,7 +31,6 @@ This project addresses the critical challenge of limited labeled datasets for ag
 <p align="center">
   <img src="docs/example_realsynthetic.png" alt="Real Synthetic Example" width="70%">
 </p>
----
 
 ## 🚀 Installation and usage
 
@@ -49,9 +48,6 @@ The configurations of the generator can be found in main.py
 
 The output of the generator is saved in ./outputs
 
-picture_viewer.ipynb demonstrate how to load the generated image and print it.
-
-Train a YOLO model on synthetic data:
 
 ## 📈 Citation
 
@@ -61,9 +57,8 @@ If you use this code or dataset, please cite the associated paper:
 @article{prono2024forestgc,
   title={FOREST-GC: A conFOrmable Rendering Engine for Synthetic Tree Generation and Counting},
   author={Luciano Prono and Najmeddine Dhieb and Philippe Bich and Chiara Boretti and Fabio Pareschi and Hakim Ghazzai and Gianluca Setti},
-  journal={IEEE Access},
-  year={2024},
-  doi={10.1109/ACCESS.2024.0429000}
+  journal={preprint},
+  year={2025},
 }
 ```
 
