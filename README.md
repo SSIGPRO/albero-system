@@ -44,6 +44,20 @@ The configurations of the generator can be found in `main.py`
 
 The output of the generator is saved in `./outputs`
 
+## 🌿 Evaluation on Real Data with Synthetic Training
+
+This section presents the predictions of **YOLO** and **SAM** models trained exclusively on synthetic tree data. The results demonstrate how well these models generalize to real forest imagery.
+
+**YOLO Predictions:**  
+The YOLO model detects trees accurately in real images:
+
+![YOLO Predictions](docs/yolo_predictions.png)
+
+**SAM Predictions:**  
+The SAM model produces high-quality segmentation masks:
+
+![SAM Predictions](docs/sam_predictions.png)
+
 
 ## 📈 Citation
 
