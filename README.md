@@ -24,10 +24,6 @@ This project addresses the critical challenge of limited labeled datasets for ag
 - Provides annotations for supervised learning.
 - Python + PyTorch implementation optimized for GPUs.
 
----
-
-## 🌳🌳 An example 🌳🌳
-
 <p align="center">
   <img src="docs/example_realsynthetic.png" alt="Real Synthetic Example" width="70%">
 </p>
