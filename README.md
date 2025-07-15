@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner1.jpg" alt="FOREST-GC Banner" width="80%">
+  <img src="docs/banner.jpg" alt="FOREST-GC Banner" width="80%">
 </p>
 
 # FOREST-GC: A conFOrmable Rendering Engine for Synthetic Tree Generation and Counting
