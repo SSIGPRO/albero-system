@@ -48,7 +48,7 @@ Clone the repository:
 
 ```bash
 git clone https://github.com/SSIGPRO/albero-system.git
-cd field_generator
+cd albero-system/field_generator
 ```
 In order to launch the image generator, use
 
