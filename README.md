@@ -26,9 +26,7 @@ This project addresses the critical challenge of limited labeled datasets for ag
 
 ---
 
-## 🌳🌳 An example
-
-### Real vs Synthetic Image Example
+## 🌳🌳 An example 🌳🌳
 
 <p align="center">
   <img src="docs/example_realsynthetic.png" alt="Real Synthetic Example" width="70%">
