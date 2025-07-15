@@ -2,7 +2,7 @@
   <img src="docs/banner.jpg" alt="FOREST-GC Banner" width="80%">
 </p>
 
-# FOREST-GC: A con**FO**rmable **R**endering **E**ngine for **S**ynthetic **T**ree **G**eneration and **C**ounting
+# FOREST-GC: A conFOrmable Rendering Engine for Synthetic Tree Generation and Counting
 **Authors:**  *Luciano Prono*<sup>1</sup>, *Najmeddine Dhieb*<sup>2</sup>, *Philippe Bich*<sup>1</sup>, *Chiara Boretti*<sup>1</sup>, *Fabio Pareschi*<sup>1</sup>, *Hakim Ghazzai*<sup>2</sup>, and *Gianluca Setti*<sup>2</sup>
 
 <sup>1</sup> Politecnico di Torino, Italy  
@@ -74,7 +74,7 @@ If you use this code or dataset, please cite the associated paper:
 
 ## 🤝 Acknowledgments
 
-This work is part of the project NODES which has receive was fundings from the MUR - M4C2 1.5 of PNRR funded by the European Union - NextGenerationEU (Grant agreement no. ECS00000036).
+This work is part of the project NODES which has received fundings from the MUR - M4C2 1.5 of PNRR funded by the European Union - NextGenerationEU (Grant agreement no. ECS00000036).
 
 ---
 
