@@ -6,7 +6,7 @@
 **Authors:**  *Luciano Prono*<sup>1</sup>, *Najmeddine Dhieb*<sup>2</sup>, *Philippe Bich*<sup>1</sup>, *Chiara Boretti*<sup>1</sup>, *Fabio Pareschi*<sup>1</sup>, *Hakim Ghazzai*<sup>2</sup>, and *Gianluca Setti*<sup>2</sup>
 
 <sup>1</sup> Politecnico di Torino, Italy  
-<sup>2</sup> King Abdullah University of Science and Technology, Saudi Arabia
+<sup>2</sup> King Abdullah University of Science and Technology (KAUST), Saudi Arabia
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
