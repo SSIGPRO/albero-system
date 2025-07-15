@@ -54,7 +54,7 @@ The output of the generator is saved in ./outputs
 If you use this code or dataset, please cite the associated paper:
 
 ```
-@article{prono2024forestgc,
+@article{prono2025forestgc,
   title={FOREST-GC: A conFOrmable Rendering Engine for Synthetic Tree Generation and Counting},
   author={Luciano Prono and Najmeddine Dhieb and Philippe Bich and Chiara Boretti and Fabio Pareschi and Hakim Ghazzai and Gianluca Setti},
   journal={preprint},
