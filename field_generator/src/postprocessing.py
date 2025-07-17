@@ -1,9 +1,7 @@
 import numpy as np
 import time
 from types import SimpleNamespace
-import torch
-from base import gaussian_filter
-from glue_n_split import glue_together,\
+from src.glue_n_split import glue_together,\
                          rotate_n_crop,\
                          rotate_coords,\
                          crop_coordinates,\
