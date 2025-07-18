@@ -1,7 +1,6 @@
 import torch
 import random
-from torchvision.transforms import v2
-from base import gaussian_filter, normalize_positive_tensor, normalize_tensor
+from src.utils import gaussian_filter, normalize_positive_tensor, normalize_tensor
 
 def generate_probability_maps(prob_map_size,
                               batch_size=1,
@@ -93,23 +92,23 @@ def generate_tree_sprites(treesize_map,
     batch_size = treesize_map.shape[0]
     map_N, map_M = treesize_map.shape[1], treesize_map.shape[2]
     # Sprite size
-    N = tree_sprite_size*2    
+    N = tree_sprite_size*2
 
     # Center of the circle
     center = (N//2, N//2)
     y_coords, x_coords = torch.meshgrid(torch.arange(N, device=device), torch.arange(N, device=device), indexing='ij')
-    
+
     # Compute distances from the center+offset for all pixels
     x_coords = x_coords.unsqueeze(0).unsqueeze(0).expand(batch_size, map_N, map_M, -1, -1)
     y_coords = y_coords.unsqueeze(0).unsqueeze(0).expand(batch_size, map_N, map_M, -1, -1)
-    
+
     tree_offsets = tree_offsets.permute(1, 0, 2, 3) # permute to (2, batch_size, N, N)
     x_offsets = tree_offsets[0].unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)
     y_offsets = tree_offsets[1].unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)
     dist = torch.sqrt((x_coords - center[0] - x_offsets) ** 2 + (y_coords - center[1] - y_offsets) ** 2)
 
     del x_coords, y_coords, x_offsets, y_offsets
-    
+
     # Generate noisy radius values
     noise = (torch.rand(*treesize_map.shape, N, N, device=device) - 0.5) * 2 * noise_level # uniform noise between -noise_level and +noise_level
     noise = gaussian_filter(noise.view(-1, noise.shape[3], noise.shape[3]), filter_size, filter_sigma).view(*noise.shape)
@@ -117,10 +116,10 @@ def generate_tree_sprites(treesize_map,
     noisy_radius = torch.clamp(radius.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, N, N)+noise, 0, max_tree_size*1.2)
 
     del noise
-    
+
     # Fill in the circle (set to color where distance <= noisy radius)
     tree_sprites = (dist <= noisy_radius)*torch.sqrt(torch.clamp(noisy_radius**2-dist**2, 0, None)/(torch.max(noisy_radius)**2)) # circle-like shading
-    
+
     return tree_sprites
 
 def _compose_stack(sprites, portion_num, overlap=(0, 0)):
@@ -195,7 +194,7 @@ def _shift_towards_direction(tensor, delta, theta):
     # Calculate integer steps for indexing
     step_x = torch.round(dx*delta).int()
     step_y = torch.round(dy*delta).int()
-    
+
     delta = int(round(delta))
 
     # Pad the tensor to handle edge cases
@@ -210,7 +209,7 @@ def _shift_towards_direction(tensor, delta, theta):
         # Shift the tensor in the direction of the unit vector
         shifted_tensor = padded_tensor[delta + step_y : delta + step_y + tensor.shape[-2],
                                        delta + step_x : delta + step_x + tensor.shape[-1]]
-    
+
     return shifted_tensor
 
 def project_shadow(tensor, iterations, strength, rad_dir, filter_size=21, filter_sigma=1):

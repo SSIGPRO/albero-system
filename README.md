@@ -36,13 +36,30 @@ Clone the repository:
 git clone https://github.com/SSIGPRO/albero-system.git
 cd albero-system/field_generator
 ```
-In order to launch the image generator, use
+### Using Docker (Recommended)
+
+```bash
+# Build the Docker image
+docker build -t field-generator .
+
+# Run the Docker image
+docker run --gpus all -it --rm -v "$(pwd)/outputs":/app/outputs field-generator bash
+```
+
+### Local Installation
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+```
+
+In order to launch the image generator with default parameters, use
 
     python main.py
 
-The configurations of the generator can be found in `main.py`
+The generator supports extensive configuration through command-line arguments or by modifying the `DEFAULT_CONFIG` in `src/constants.py`.
 
-The output of the generator is saved in `./outputs`
+The output of the generator is saved in default folder `outputs`
 
 ## 🌿 Evaluation on Real Data with Synthetic Training
 

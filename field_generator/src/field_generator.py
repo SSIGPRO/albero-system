@@ -3,9 +3,9 @@ from torchvision.transforms import v2
 import numpy as np
 import time
 import random
-from base import gaussian_filter, normalize_tensor, normalize_positive_tensor
+from src.utils import gaussian_filter, normalize_tensor, normalize_positive_tensor
 from types import SimpleNamespace
-from generators import generate_probability_maps,\
+from src.generators import generate_probability_maps,\
                        generate_tree_offsets,\
                        generate_tree_sprites,\
                        prob_to_treesize,\
@@ -27,13 +27,13 @@ def generate_field(**kwargs):
 
     GAIN = config.field_generation_zoom
     CANVAS_SIZE = config.field_size[0]*GAIN, config.field_size[1]*GAIN
- 
+
     def get_random_value(value_list):
         return_value = value_list
         if type(value_list) is list:
             return_value = random.choice(value_list)
         return return_value
-    
+
     # Pick color set
     color_set = random.choice(config.color_sets)
     color_bkg = [c*(1+random.uniform(-config.color_randomization_strength, config.color_randomization_strength)) for c in color_set[0]]
@@ -42,12 +42,12 @@ def generate_field(**kwargs):
     color_bkg_patches_notrees = [c*(1+random.uniform(-config.color_randomization_strength, config.color_randomization_strength)) for c in color_set[3]]
     color_tree = [c*(1+random.uniform(-config.color_randomization_strength, config.color_randomization_strength)) for c in color_set[4]]
     color_tree_shadow = [c*(1+random.uniform(-config.color_randomization_strength, config.color_randomization_strength)) for c in color_set[5]]
-    
+
     # generate background color
     canvas_shape = (config.batch_size,
                     CANVAS_SIZE[0],
                     CANVAS_SIZE[1])
-    
+
     field_channels = torch.stack([
         torch.full(canvas_shape, color_bkg[0], device=config.device, dtype=torch.float32),
         torch.full(canvas_shape, color_bkg[1], device=config.device, dtype=torch.float32),
@@ -114,21 +114,21 @@ def generate_field(**kwargs):
                                          final_filter_size=config.treemap_final_filter_size,
                                          final_filter_sigma=config.treemap_final_filter_sigma,
                                          device=config.device)
-    
+
     # Generate tree size map and number of trees labels
-    treesize_map, tree_boolmap = prob_to_treesize(prob_map, 
+    treesize_map, tree_boolmap = prob_to_treesize(prob_map,
                                                   threshold=config.tree_threshold,
                                                   treeshape_min_size=config.treeshape_min_radius*GAIN,
                                                   treeshape_max_size=config.treeshape_max_radius*GAIN,
                                                   steepness=config.tree_steepness,
                                                   distribution_shift=config.tree_distribution_shift)
-    
+
     # Generate tree offsets and absolute positions
     tree_offsets = generate_tree_offsets(treesize_map=treesize_map,
                                          center_jitter=(config.tree_center_jitter*GAIN, config.tree_center_jitter*GAIN),
                                          alternate_offset=config.tree_alternate_offset*GAIN)
 
-    
+
     # Free gpu memory
     del prob_map
 
@@ -147,7 +147,7 @@ def generate_field(**kwargs):
                                             constant_offset,
                                             config.tree_xspace*GAIN,
                                             config.tree_yspace*GAIN,)
-    
+
     if config.verbose:
         toc = time.perf_counter()
         print(f"Field of trees coordinates generation time: {toc - tic:0.4f} seconds")
@@ -292,10 +292,10 @@ def generate_field(**kwargs):
 
     # Compute field gradient
     field_gradient = compute_gradient_map(field_tree_mask,
-                                          config.shadow_direction) 
+                                          config.shadow_direction)
 
     # free gpu memory
-    del field_tree_mask 
+    del field_tree_mask
 
     # Apply shadowing based on gradient map
     apply_lighting(field_channels, field_gradient, config.shadow_blending_strength)
@@ -326,7 +326,7 @@ def generate_field(**kwargs):
 
     # Adjust coordinates to match the output size and convert to numpy
     for i in range(len(tree_coordinates)):
-        tree_coordinates[i] = tree_coordinates[i].to(torch.float32) 
+        tree_coordinates[i] = tree_coordinates[i].to(torch.float32)
         tree_coordinates[i] = (tree_coordinates[i]/GAIN).cpu().numpy().astype(np.uint16)
 
     if config.verbose:
