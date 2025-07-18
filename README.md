@@ -63,7 +63,7 @@ The output of the generator is saved in default folder `outputs`
 
 ## 🌿 Evaluation on Real Data with Synthetic Training
 
-This section presents the predictions of **YOLO-v8-l** and **SAM-ViT-Large** models trained exclusively on synthetic tree data. The results demonstrate how well these models generalize to real forest imagery.
+This section presents the predictions of **YOLO-v8-l** and **SAM-ViT-Large** models trained exclusively on synthetic tree data. The results demonstrate how well these models generalize to real imagery.
 
 **YOLO Predictions:** 
 
