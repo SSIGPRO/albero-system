@@ -3,10 +3,12 @@
 </p>
 
 # FOREST-GC: a conFOrmable Rendering Engine for Synthetic Tree Generation and Counting
-**Authors:**  *Luciano Prono*<sup>1</sup>, *Najmeddine Dhieb*<sup>2</sup>, *Philippe Bich*<sup>1</sup>, *Chiara Boretti*<sup>1</sup>, *Fabio Pareschi*<sup>1</sup>, *Hakim Ghazzai*<sup>2</sup>, and *Gianluca Setti*<sup>2</sup>
+**Authors:**  *Luciano Prono*<sup>1</sup>, *Najmeddine Dhieb*<sup>2</sup>, *Philippe Bich*<sup>1</sup>, *Chiara Boretti*<sup>1</sup>, *Fabio Pareschi*<sup>1</sup>, *Marco Brini*<sup>3</sup>, *Hakim Ghazzai*<sup>2</sup>, *Riccardo Rovatti*<sup>4</sup> and *Gianluca Setti*<sup>2</sup>
 
 <sup>1</sup> Politecnico di Torino, Italy  
 <sup>2</sup> King Abdullah University of Science and Technology (KAUST), Saudi Arabia
+<sup>3</sup> SAI Platform, Switzerland
+<sup>4</sup> Università di Bologna, Italy
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -81,7 +83,7 @@ If you use this code or dataset, please cite the associated paper:
 ```
 @article{prono2025forestgc,
   title={FOREST-GC: A conFOrmable Rendering Engine for Synthetic Tree Generation and Counting},
-  author={Luciano Prono and Najmeddine Dhieb and Philippe Bich and Chiara Boretti and Fabio Pareschi and Hakim Ghazzai and Gianluca Setti},
+  author={Luciano Prono and Najmeddine Dhieb and Philippe Bich and Chiara Boretti and Fabio Pareschi and Marco Brini and Hakim Ghazzai and Riccardo Rovatti and Gianluca Setti},
   journal={preprint},
   year={2025},
 }
